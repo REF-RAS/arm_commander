@@ -38,6 +38,12 @@ if __name__ == '__main__':
         # Validate setup
         rospy.loginfo(f"Move Group: {moveit_interface.is_move_group_valid()}")
         rospy.loginfo(f"EE Link: {moveit_interface.is_ee_link_valid()}")
+
+        # Get the current ee link (default) pose
+        rospy.loginfo(f"EE link pose: {moveit_interface.get_current_link_pose()}")
+
+        # Attempt to move to Home pose
+        moveit_interface.move_to_named_pose(named_pose="home")
         # DO THINGS
     except rospy.ROSInterruptException as e:
         rospy.logerr(e)

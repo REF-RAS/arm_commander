@@ -85,7 +85,119 @@ class MoveitInterface():
 
         return None
     
-    # --- Get Methods
+    # --- Robot Utility Methods
+    def reset(self) -> None:
+        """Reset of states and variables on command
+        """
+        # -- set state
+        self.agent_state = RobotAgentStates.READY
+        self.action_state = MoveitActionStates.IDLE
+        self.cached_feedback = None 
+
+        return None
+
+    def wait_while_busy(self) -> None:
+        """Wait method while robot is busy
+
+        :return: None
+        :rtype: None
+        """
+        while True:
+            if self.agent_state not in [RobotAgentStates.BUSY]:
+                return self.agent_state
+            rospy.sleep(0.05)
+
+    def abort_move(self, wait: bool = True) -> bool:
+        """Aborts motion on command
+
+        :param wait: Waits for completion if True, defaults to True
+        :type wait: bool, optional
+        :return: True on success, else False
+        :rtype: bool
+        """
+        if self.is_move_group_valid():
+            self.move_group.stop()
+            self.move_group.clear_pose_targets()
+            if wait:
+                self.wait_while_busy()
+                self.reset()
+            
+            return True
+        else:
+            return False
+    
+    # --- Robot Movement Methods
+    def move_to_named_pose(self, named_pose: str = "", wait: bool = True) -> None:
+        """Move to a Named Pose on Command
+
+        :param named_pose: Name of pose to move to, defaults to ""
+        :type named_pose: str, optional
+        :param wait: Waits for completion if True, defaults to True
+        :type wait: bool, optional
+        """
+        self.action_lock.acquire()
+
+        # Check if move_group is valid
+        if self.is_move_group_valid():
+            try:
+                if self.agent_state != RobotAgentStates.READY:
+                    rospy.logerr(f'[MoveitInterface::move_to_named_pose][MoveitAgent move_to_named_pose: not READY state]')
+                    return None
+                self.move_group.set_named_target(named_pose)
+                self.agent_state = RobotAgentStates.BUSY        
+                success = self.move_group.go(wait=wait)
+                if not wait:
+                    return None
+                rospy.loginfo(f'[MoveitInterface::move_to_named_pose][Success: {success}]')           
+                self.abort_move()
+            finally:
+                self.action_lock.release()
+        else:
+            rospy.logerr(f'[MoveitInterface::move_to_named_pose][Move group is invalid]')
+            return None
+    
+    # --- Robot Query Methods
+    def get_current_joint_positions(self, print: bool = False) -> dict:
+        """Query the robot's joint positions
+
+        :param print: Enable printing if True, defaults to False
+        :type print: bool, optional
+        :return: Dictionary of joint values
+        :rtype: dict
+        """
+        # Check if move_group is valid
+        if self.is_move_group_valid():
+            joint_values_dict = self.robot.get_current_variable_values()
+            if print: rospy.loginfo(f"[MoveitInterface::get_current_joint_positions][{joint_values_dict}]")
+            return joint_values_dict
+        else:
+            rospy.logerr(f"[MoveitInterface::get_current_joint_positions][Move group is invalid, returning empty]")
+            return dict()
+        
+    def get_current_link_pose(self, link_name: str = None, print: bool = False) -> PoseStamped:
+        """Query the robot's link pose
+
+        :param link_name: Name of link to query, defaults to None
+        :type link_name: str, optional
+        :param print: Debugging if True, defaults to False
+        :type print: bool, optional
+        :return: Pose stamped message of Pose
+        :rtype: PoseStamped
+        """
+        # Check if move_group is valid
+        if self.is_move_group_valid() and self.is_ee_link_valid():
+            # Default to end-effector link if not defined
+            if link_name is None:
+                link_name = self.end_effector_link
+            # Get the current pose from move_group
+            current_pose = self.move_group.get_current_pose(link_name)
+            if print: rospy.loginfo(f"[MoveitInterface::get_current_link_pose][current_pose: {current_pose}]")
+            return current_pose
+        else:
+            rospy.logerr(f"[MoveitInterface::get_current_link_pose][Move group or end-effector link invalid]")
+            return PoseStamped()
+        
+    # --- General Get Methods
     def get_latest_feedback(self) -> MoveGroupActionFeedback:
         """Gets the latest feedback message cached from callback
 
@@ -105,7 +217,7 @@ class MoveitInterface():
         if print: rospy.loginfo(f"[MoveitInterface::set_ee_link][name: {self.agent_state.name}]")
         return self.action_state
 
-    # --- Set Methods
+    # --- General Set Methods
     def set_ee_link(self) -> bool:
         """Sets the end-effector (ee) link through move_group
 
