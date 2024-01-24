@@ -1,19 +1,11 @@
 # Created with QCR's code template tool: https://github.com/qcr/code_templates
 
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.10.2)
 project(ref_moveit_interface)
 
-find_package(catkin REQUIRED COMPONENTS
-  rospy
-  )
+find_package(ament_cmake REQUIRED)
 
-catkin_python_setup()
+# ament_package()
 
-catkin_package(
-  )
-
-catkin_install_python(PROGRAMS
-  nodes/interface_test_node.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-  )
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 

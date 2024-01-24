@@ -1,16 +1,29 @@
 <?xml version="1.0"?>
-<!-- Created with QCR's code template tool: https://github.com/qcr/code_templates -->
-
-<package format="2">
+<package format="3">
   <name>ref_moveit_interface</name>
   <version>0.1.0</version>
   <description>The ref_moveit_interface package</description>
 
+  <!-- Maintained by: -->
   <maintainer email="robotics.ref@qut.edu.au">Andrew Lui and Dasun Gunasinghe</maintainer>
 
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
   <license>BSD</license>
 
-  <build_depend>rospy</build_depend>
-  <buildtool_depend>catkin</buildtool_depend>
+  <!-- ROS version handling -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
 
+  <!-- Tests -->
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Needed for ROS 2 -->
+    <build_type>ament_python</build_type>
+  </export>
 </package>
