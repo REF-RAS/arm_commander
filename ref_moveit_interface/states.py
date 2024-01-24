@@ -13,15 +13,31 @@ __status__ = 'Development'
 from enum import Enum
 
 # --- Definition of ENUMs ---
-class RobotAgentStates(Enum):
+class CommanderStates(Enum):
     READY = 0
     BUSY = 1
     SUCCEEDED = 2
     ABORTED = 3
+    ERROR = 4
 
-class MoveitActionStates(Enum):
-    IDLE = 0
-    PLANNING = 1
-    MONITOR = 2
-    ERROR = 3
-    COMPLETED = 4
+class TaskStates(Enum):
+    INVALID = -1
+    STANDBY = 0
+    SUBMITTED = 1
+    WORKING = 2
+    SUCCEEDED = 3
+    CANCELLED = 4
+    ABORTED = 5
+    FAILED = 6
+
+COMPLETION_STATES = [
+    TaskStates.SUCCEEDED, 
+    TaskStates.ABORTED, 
+    TaskStates.CANCELLED, 
+    TaskStates.FAILED, 
+    TaskStates.INVALID
+] 
+
+if __name__ == '__main__':
+    state = GeneralCommanderStates.BUSY
+    print(state)

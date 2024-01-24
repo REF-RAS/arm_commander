@@ -14,7 +14,7 @@ __status__ = 'Development'
 import signal, sys, rclpy, ament_index_python
 
 # project modules
-from ref_moveit_interface.commander_moveit import CustomCommander
+from ref_moveit_interface.commander_moveit import ArmCommander
 from moveit.planning import MoveItPy
 from rclpy.logging import get_logger
 
@@ -34,20 +34,17 @@ def main(args = None):
     :type args: Any, optional
     """
     rclpy.init(args=args)
+    # Define the logging interface to use
     logger = get_logger("moveit_interface_node")
-    logger.info(f"TEST OUT AT BEGINNING")
-    robot = MoveItPy(node_name="moveit_py")
-    logger.info(f"HERE AFTER NODE")
-
+    node = rclpy.create_node(node_name="moveit_interface_node")
     signal.signal(signal.SIGINT, stop)
 
     try:
         logger.info('Test REF moveit interface node is running')
-        commander = CustomCommander(
-            robot=robot, 
-            logger=logger,
+        commander = ArmCommander(
             moveit_group_name="manipulator",
-            world_link="base_link"
+            world_link="base_link",
+            nh=node
         )
 
         # Validate setup
@@ -58,12 +55,14 @@ def main(args = None):
         logger.info(f"EE link pose: {commander.get_current_link_pose()}")
 
         # Attempt to move to Home pose
-        commander.move_to_named_pose(named_pose="home")
-        # DO THINGS
+        commander.move_to_named_pose(named_pose="home", wait=False)
+
+        
     except Exception as e:
         logger.error(e)
 
-    # node.destroy_node()
+    # Shutdown robot and node
+    commander.shutdown()
     rclpy.shutdown()
 
 # -- the main program
