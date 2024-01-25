@@ -21,7 +21,7 @@ from moveit.core.controller_manager import ExecutionStatus
 from moveit.planning import MoveItPy
 
 # --- Import ROS Messages
-# from moveit_msgs.msg import MoveGroupActionFeedback, PlanningScene, ObjectColor 
+from moveit_msgs.msg import RobotTrajectory, PlanningScene, ObjectColor 
 # from moveit_msgs.msg import Constraints, OrientationConstraint, JointConstraint, PositionConstraint
 from std_msgs.msg import Float64
 from actionlib_msgs.msg import GoalStatus
@@ -78,6 +78,8 @@ class ArmCommander():
         self.commander_state: CommanderStates = CommanderStates.READY
         # NOTE: may not be needed due to direct API calls
         self.cached_result = None
+        # NOTE: new variable to capture execution status
+        self.execution_status: ExecutionStatus = None
 
         # --- Define workspace walls
         self.wall_name_list = []
@@ -108,12 +110,12 @@ class ArmCommander():
     def _pub_workspace_color(self) -> None:
         """TODO: publish colours of workspace (wall) objects
         """
-        pass
+        self.logger.warn(f"[ArmCommander::_pub_workspace_color][Not Yet Implemented]")
 
     def _pub_transform_all_objects(self) -> None:
         """TODO: publish transforms of all objects in scene
         """
-        pass
+        self.logger.warn(f"[ArmCommander::_pub_transform_all_objects][Not Yet Implemented]")
 
     def _pub_transform_object(self, name, pose) -> None:
         """TODO: publish transform of a specific named object
@@ -123,17 +125,17 @@ class ArmCommander():
         :param pose: _description_
         :type pose: _type_
         """
-        pass
+        self.logger.warn(f"[ArmCommander::_pub_transform_object][Not Yet Implemented]")
 
     def _cb_move_group_result(self) -> None:
         """TODO: alternative direct API version of this
         """
-        pass
+        self.logger.warn(f"[ArmCommander::_cb_move_group_result][Not Yet Implemented]")
 
     def _cb_trajectory_execute_result(self) -> None:
         """TODO: alternative direct API version of this
         """
-        pass
+        self.logger.warn(f"[ArmCommander::_cb_trajectory_execute_result][Not Yet Implemented]")
 
     def _cb_handle_result_status(self) -> None:
         """TODO: alternative direct API version of this
@@ -141,7 +143,16 @@ class ArmCommander():
         :return: _description_
         :rtype: _type_
         """
-        pass
+        self.logger.warn(f"[ArmCommander::_cb_handle_result_status][Not Yet Implemented]")
+
+    def cb_execute(self, outcome) -> None:
+        """Callback to Trajectory Execution Manager execution call
+
+        :param outcome: Status of execution
+        :type outcome: ExecutionStatus
+        """
+        self.execution_status = outcome
+        self.logger.info(f"[ArmCommander::cb_execute][Execution Status: {outcome.status}]")
 
     # --- Utility Methods
     def info(self, print: bool = False) -> str:
@@ -153,13 +164,13 @@ class ArmCommander():
         :rtype: str
         """
         string_list = [
-        f'group name: {self.GROUP_NAME}',
-        f'planning time: {None}'
-        f'pose reference frame: {None}',   
-        f'end-effector:\nlinks: {self.end_effector_link}',
-        f'pose: {None}',
-        f'roll, pitch, yaw: {None}',
-        f'goal tolerance (joint, position, orientation): {None}'
+        f'> group name: {self.GROUP_NAME}',
+        f'> planning time: {None}',
+        f'> pose reference frame: {self.WORLD_REFERENCE_LINK}',   
+        f'> end-effector:\t\nlinks: {self.end_effector_link}',
+        f'> pose: {self.get_current_link_pose()}',
+        f'> roll, pitch, yaw: {None}',
+        f'> goal tolerance (joint, position, orientation): {None}'
         ]
         output = '\n'.join(string_list)
         if print:
@@ -168,11 +179,17 @@ class ArmCommander():
 
     def shutdown(self) -> None:
         """Shutdown command for moveit_py
+
+        :return: None
+        :rtype: None
         """
         if self.robot: self.robot.shutdown()
 
     def reset(self) -> None:
         """Reset of states and variables on command
+
+        :return: None
+        :rtype: None
         """
         # -- set state
         self.commander_state = CommanderStates.READY
@@ -191,33 +208,39 @@ class ArmCommander():
                 return self.commander_state
             timeit.sleep(0.05)
 
-    # def abort_move(self, wait: bool = True) -> bool:
-    #     """Aborts motion on command
+    def abort_move(self, wait: bool = True) -> bool:
+        """Aborts motion on command
 
-    #     :param wait: Waits for completion if True, defaults to True
-    #     :type wait: bool, optional
-    #     :return: True on success, else False
-    #     :rtype: bool
-    #     """
-    #     if self.is_move_group_valid():
-    #         self.move_group.stop()
-    #         self.move_group.clear_pose_targets()
-    #         if wait:
-    #             self.wait_while_busy()
-    #             self.reset()
+        :param wait: Waits for completion if True, defaults to True
+        :type wait: bool, optional
+        :return: True on success, else False
+        :rtype: bool
+        """
+        if self.is_move_group_valid():
+            # Get the Trajectory Execution Manager
+            tem = self.robot.get_trajactory_execution_manager()
+
+            # Request execution stop
+            tem.stop_execution()
+
+            self.logger.info(f"[ArmCommander::abort_move][Execution Stopped]")
             
-    #         return True
-    #     else:
-    #         return False
+            # if wait:
+            #     self.wait_while_busy()
+            self.reset()
+            
+            return True
+        else:
+            return False
     
     # --- Robot Movement Methods
-    def plan_and_execute(self, wait: bool = False) -> ExecutionStatus:
+    def plan_and_execute(self, wait: bool = False) -> None:
         """A common plan and execute method for the robot
 
         :param wait: Set True to wait for execution, defaults to False
         :type wait: bool, optional
-        :return: outcome with status on success, else None
-        :rtype: ExecutionStatus
+        :return: None (outcome in callback -> see ArmCommander::cb_plan_execute_status())
+        :rtype: None
         """
 
         # --- Execute on Successful Plan
@@ -225,13 +248,29 @@ class ArmCommander():
         if plan_result:
             self.logger.info(f"[ArmCommander::plan_and_execute][Executing Valid Plan...]")
             robot_trajectory = plan_result.trajectory
-            if wait:
-                outcome = self.robot.execute(robot_trajectory, controllers=[])
-                self.robot.get_trajactory_execution_manager().wait_for_execution()
-                self.logger.info(f'[ArmCommander::plan_and_execute][Completed Execution with Wait]')
+
+            # Check if there are controllers to execute
+            tem = self.robot.get_trajactory_execution_manager()
+            if not tem.ensure_active_controllers_for_group(self.GROUP_NAME):
+                self.logger.error(f"ERROR -> no active controllers")
+                return None
+            
+            # Execute the trajectory with no wait
+            rt = RobotTrajectory()
+            rt = robot_trajectory.get_robot_trajectory_msg()
+            # Pass robot trajectory as a moveit RobotTrajectory object with controller list
+            tem.push(rt, '')
+            # Retrieve status from callback
+            tem.execute(callback=self.cb_execute)
+            if wait:  
+                self.logger.info(f"[ArmCommander::plan_and_execute][Execution in Progress; Waiting...]")
+                self.commander_state = CommanderStates.BUSY
+                tem.wait_for_execution()
             else:
-                outcome = self.robot.execute(robot_trajectory, controllers=[])
-            return outcome
+                self.logger.info(f"[ArmCommander::plan_and_execute][Execution in Progress; Skipping Wait]")
+            
+            self.logger.info(f"[ArmCommander::plan_and_execute][Execution Request Complete]")
+            return None
         else:
             self.logger.error(f"[ArmCommander::plan_and_execute][Plan Failed]")
             return None
@@ -258,18 +297,10 @@ class ArmCommander():
                 self.move_group.set_goal_state(configuration_name=named_pose)
                 self.commander_state = CommanderStates.BUSY    
 
-                # --- Create Default Plan    
-                outcome = self.plan_and_execute(wait=wait)
+                # --- Create Default Plan and Execute with/without Wait  
+                self.plan_and_execute(wait=wait)
                 
-                if not wait:
-                    self.logger.info(f"[ArmCommander::move_to_named_pose][Skipping with No Wait]")
-                    return None
-                
-                if outcome == None:
-                    self.logger.error(f'[ArmCommander::move_to_named_pose][Invalid Plan or Execution]')
-                    return None
-                
-                self.logger.info(f'[ArmCommander::move_to_named_pose][Execution Status: {outcome.status}]')           
+                self.logger.info(f'[ArmCommander::move_to_named_pose][Execution Requested]')           
             finally:
                 self.action_lock.release()
         else:
