@@ -214,7 +214,7 @@ class ArmCommander():
             
             # if wait:
             #     self.wait_while_busy()
-            self.reset()
+            self.reset_state()
             
             return True
         else:
@@ -320,37 +320,54 @@ class ArmCommander():
         :rtype: Pose
         """
         self.action_lock.acquire()
-        try:
-            reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
-            target_pose:PoseStamped = self.pose_in_frame(self.end_effector_link, reference_frame)
-            target_pose.pose.position.x = x if x is not None else target_pose.pose.position.x
-            target_pose.pose.position.y = y if y is not None else target_pose.pose.position.y
-            target_pose.pose.position.z = z if z is not None else target_pose.pose.position.z
-            if cartesian:
-                current_in_world_frame:PoseStamped = self.pose_in_frame(self.end_effector_link, self.WORLD_REFERENCE_LINK)
-                target_in_world_frame:PoseStamped = self.transform_pose(target_pose, self.WORLD_REFERENCE_LINK)
-                waypoints = [current_in_world_frame.pose, target_in_world_frame.pose]
-                self.commander_state = CommanderStates.BUSY
-                (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE, 0.00) 
-                if fraction < accept_fraction:
-                    rospy.logerr(f'Planning failed due to collision ({fraction})')
-                    self.commander_state, self.commander_state.message = CommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
-                    return None 
-                self.move_group.execute(plan, wait=wait)
-            else:
-                self.move_group.set_pose_target(target_pose)
-                self.commander_state = CommanderStates.BUSY
-                self.move_group.go(wait=wait)
-            if not wait:
-                return target_pose
-            self.abort_move()
-            return target_pose 
-        except Exception as e:
-            rospy.logerr(f'System error: {e} {traceback.format_exc()}')
-            self.commander_state = CommanderStates.ABORTED
-            self.commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'  
-        finally:
-            self.action_lock.release()
+        # try:
+        reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
+        target_pose:PoseStamped = self.pose_in_frame(self.end_effector_link, reference_frame)
+        target_pose.pose.position.x = x if x is not None else target_pose.pose.position.x
+        target_pose.pose.position.y = y if y is not None else target_pose.pose.position.y
+        target_pose.pose.position.z = z if z is not None else target_pose.pose.position.z
+
+        self.move_group.set_start_state_to_current_state()
+        if cartesian:
+            current_in_world_frame:PoseStamped = self.pose_in_frame(self.end_effector_link, self.WORLD_REFERENCE_LINK)
+            # target_in_world_frame:PoseStamped = self.transform_pose(target_pose, self.WORLD_REFERENCE_LINK)
+            # waypoints = [current_in_world_frame.pose, target_in_world_frame.pose]
+            self.commander_state = CommanderStates.BUSY
+
+            req = self.move_group.get_motion_plan_request()
+
+            robot_state = RobotState(self.robot.get_robot_model())
+            robot_state.compute_cartesian_path()
+            # plan_result = self.move_group.set_path_constraints(target_pose)
+            # self.logger.info(f"MOVE TO POSITION Waypoints: {waypoints}")
+            # (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE, 0.00) 
+            # if fraction < accept_fraction:
+            #     rospy.logerr(f'Planning failed due to collision ({fraction})')
+            #     self.commander_state, self.commander_state.message = CommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
+            #     return None 
+            # self.move_group.execute(plan, wait=wait)
+        else:
+            self.commander_state = CommanderStates.BUSY
+            self.logger.info(f"[ArmCommander::move_to_position][Target: {target_pose}]")
+            # NOTE: both pose stamped message and pose link (end-effector) is needed to set goal state
+            self.move_group.set_goal_state(pose_stamped_msg=target_pose, pose_link=self.end_effector_link)
+
+            # --- Create Default Plan and Execute with/without Wait  
+            self.plan_and_execute(wait=wait)
+
+        if not wait:
+            return target_pose
+        
+        self.abort_move()
+        self.action_lock.release()
+
+        return target_pose 
+        # except Exception as e:
+        #     self.logger.error(f'[ArmCommander::move_to_position][System error: {e}]')
+        #     self.commander_state = CommanderStates.ABORTED
+        #     self.commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'  
+        # finally:
+        self.action_lock.release()
 
     # --- Robot Query Methods
     def current_joint_positions(self, print=False) -> dict:
@@ -596,9 +613,31 @@ class ArmCommander():
         except tf2_ros.ExtrapolationException as e:
             self.logger.error(f"[ArmCommander::transform_pose][Extrapolation Error: {e}]")
             raise
-
+    
         return transformed_pose
     
+    # set the joint positions (as a list) of a named pose
+    def add_named_pose(self, name: str, joint_values: list):
+        """ Add a named pose specified in joint positions to the commander
+
+        :param name: The name of the pose to be defined
+        :type name: str
+        :param joint_values: a list of joint values
+        :type joint_values: list
+        """
+        self.logger.warn(f"[ArmCommander::add_named_pose][Not Yet Implemented]")
+        # self.move_group.remember_joint_values(name, values=joint_values)
+    
+    # remove the named pose from the commander
+    def forget_named_pose(self, name: str):
+        """Remove the named pose from the commander
+
+        :param name: The name of the pose to be defined
+        :type name: str
+        """
+        self.logger.warn(f"[ArmCommander::add_named_pose][Not Yet Implemented]")
+        # self.move_group.forget_joint_values(name)    
+
     # --- General Get Methods
     def _get_pose(self, link_name: str = None, print: bool = False) -> Pose():
         """Internal method to get the pose of the robot

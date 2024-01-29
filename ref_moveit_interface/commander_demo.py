@@ -59,7 +59,12 @@ class CommanderDemo():
             self.logger.info(f"XYZRPY OF ROBOT LINK: {xyzrpy_of_robot_link}")
 
             # Attempt to move to Home pose
-            self.commander.move_to_named_pose(named_pose="home", wait=False)
+            self.commander.move_to_named_pose(named_pose="home", wait=True)
+
+            # Attempt to move to a position
+            self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=True)
+
+
 
             self.commander.shutdown()
         except Exception as e:
