@@ -23,7 +23,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'entry_point = ref_moveit_interface.interface_node:main'
+            'entry_point = ref_moveit_interface.commander_demo:main'
         ]
     }
 )

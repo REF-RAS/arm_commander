@@ -12,7 +12,9 @@ __status__ = 'Development'
 
 # --- General Imports
 import sys, copy, threading, time, signal, math, rclpy
-import timeit, tf2_ros
+import timeit, tf2_ros, tf_transformations
+import spatialmath as sm
+# from tf_transformations import euler_from_quaternion
 from rclpy.logging import get_logger
 
 # --- Import moveit_py bindings to moveit core (Official)
@@ -22,7 +24,7 @@ from moveit.planning import MoveItPy
 
 # --- Import ROS Messages
 from moveit_msgs.msg import RobotTrajectory, PlanningScene, ObjectColor 
-# from moveit_msgs.msg import Constraints, OrientationConstraint, JointConstraint, PositionConstraint
+from moveit_msgs.msg import Constraints, OrientationConstraint, JointConstraint, PositionConstraint
 from std_msgs.msg import Float64
 from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose, PoseStamped
@@ -86,8 +88,10 @@ class ArmCommander():
 
         # --- Transform Publishers
         # NOTE: requires node handle passed into class
+        self.tf_buffer = tf2_ros.Buffer()
         self.tf_pub = tf2_ros.TransformBroadcaster(node=nh)
-        self.tf_listener = tf2_ros.TransformListener(tf2_ros.Buffer(), node=nh)
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, node=nh)
+        self.nh = nh
 
         # --- Constraints
         # NOTE: may have an alternative implementation 
@@ -155,27 +159,10 @@ class ArmCommander():
         self.logger.info(f"[ArmCommander::cb_execute][Execution Status: {outcome.status}]")
 
     # --- Utility Methods
-    def info(self, print: bool = False) -> str:
-        """TODO: Essential information for display
-
-        :param print: Sends the information to the output, defaults to False
-        :type print: bool, optional
-        :return: Formatted information of the commander
-        :rtype: str
+    def spin(self) -> None:
+        """Spins up the ROS2 Node
         """
-        string_list = [
-        f'> group name: {self.GROUP_NAME}',
-        f'> planning time: {None}',
-        f'> pose reference frame: {self.WORLD_REFERENCE_LINK}',   
-        f'> end-effector:\t\nlinks: {self.end_effector_link}',
-        f'> pose: {self.get_current_link_pose()}',
-        f'> roll, pitch, yaw: {None}',
-        f'> goal tolerance (joint, position, orientation): {None}'
-        ]
-        output = '\n'.join(string_list)
-        if print:
-            self.logger.info(output)
-        return output
+        rclpy.spin(self.nh)
 
     def shutdown(self) -> None:
         """Shutdown command for moveit_py
@@ -185,7 +172,7 @@ class ArmCommander():
         """
         if self.robot: self.robot.shutdown()
 
-    def reset(self) -> None:
+    def reset_state(self) -> None:
         """Reset of states and variables on command
 
         :return: None
@@ -197,11 +184,11 @@ class ArmCommander():
 
         return None
 
-    def wait_while_busy(self) -> None:
+    def wait_for_busy_end(self) -> CommanderStates:
         """Wait method while robot is busy
 
-        :return: None
-        :rtype: None
+        :return: The final state of the commander
+        :rtype: CommanderStates
         """
         while True:
             if self.commander_state not in [CommanderStates.BUSY]:
@@ -365,74 +352,387 @@ class ArmCommander():
         finally:
             self.action_lock.release()
 
-    # # --- Robot Query Methods
-    # def get_current_joint_positions(self, print: bool = False) -> dict:
-    #     """Query the robot's joint positions
+    # --- Robot Query Methods
+    def current_joint_positions(self, print=False) -> dict:
+        """ Get the positions of all the joints
 
-    #     :param print: Enable printing if True, defaults to False
-    #     :type print: bool, optional
-    #     :return: Dictionary of joint values
-    #     :rtype: dict
-    #     """
-    #     # Check if move_group is valid
-    #     if self.is_move_group_valid():
-    #         joint_values_dict = self.robot.get_current_variable_values()
-    #         if print: self.logger.info(f"[ArmCommander::get_current_joint_positions][{joint_values_dict}]")
-    #         return joint_values_dict
-    #     else:
-    #         self.logger.error(f"[ArmCommander::get_current_joint_positions][Move group is invalid, returning empty]")
-    #         return dict()
+        :param print: Sends the information to the output as well, defaults to False
+        :type print: bool, optional
+        :return: Pairs of (joint_name, position) in a dictionary
+        :rtype: dict
+        """
+        self.logger.warn(f"[ArmCommander::current_joint_positions][Not Yet Implemented]")
+        # TODO: update this method for moveit_py
+        joint_values_dict = dict() #self.robot.get_current_variable_values()
+        if print: self.logger.info(joint_values_dict)
+        return joint_values_dict
+    
+    def current_joint_positons_as_list(self, print=False) -> list:
+        """ Get the positions of all the joints
+
+        :param print: Sends the information to the output as well, defaults to False
+        :type print: bool, optional
+        :return: Lists of joint positions
+        :rtype: list
+        """
+        self.logger.warn(f"[ArmCommander::current_joint_positions_as_list][Not Yet Implemented]")
+        # TODO: update this method for moveit_py
+        joint_values = list() #self.move_group.get_current_joint_values()
+        if print: self.logger.info(joint_values)
+        return joint_values   
+
+    def pose_in_frame_as_xyzq(self, link_name:str=None, reference_frame:str=None, ros_time:rclpy.time.Time=None, print=False) -> list:
+        """ Get the pose of a link as a list of 7 floats (xyzq)
+
+        :param link_name: The name of the link to be queried, defaults to the end-effector
+        :type link_name: str, optional
+        :param reference_frame: The name of the frame of reference, defaults to the world/default
+        :type reference_frame: str, optional
+        :param ros_time: The time when the pose is queried, defaults to current time
+        :type ros_time: rclpy.time.Time, optional
+        :param print: Sends the information to the output as well, defaults to False
+        :type print: bool, optional
+        :raises ValueError: when the names of the link_name or reference_frame is invalid
+        :return: The pose in the format of a list of 7 floats (xyzq)
+        :rtype: list
+        """
+        link_name = self.end_effector_link if link_name is None else link_name
+        ros_time = rclpy.time.Time() if ros_time is None else ros_time
+        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame    
+        try:
+            trans = self.tf_buffer.lookup_transform(
+                target_frame=reference_frame,
+                source_frame=link_name,
+                time=rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=1.0)
+            )
+
+            # NOTE: quaternion in x, y, z, w order
+            trans_list: list = [
+                trans.transform.translation.x,
+                trans.transform.translation.y,
+                trans.transform.translation.z,
+                trans.transform.rotation.x,
+                trans.transform.rotation.y,
+                trans.transform.rotation.z,
+                trans.transform.rotation.w,
+            ]
+
+            if print: 
+                self.logger.info(f'[ArmCommander::pose_in_frame_as_xyzq][pose of {link_name} from {reference_frame}: {trans_list}]')
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as e:
+            raise ValueError(f'Invalid parameter or TF error: {e}')
+        except tf2_ros.ExtrapolationException as e:
+            self.logger.error(f"[ArmCommander::pose_in_frame_as_xyzq][Extrapolation Error: {e}]")
+            raise
         
-    def get_current_link_pose(self, link_name: str = None, print: bool = False) -> Pose:
-        """Query the robot's link pose
+        return trans_list
+    
+    def pose_in_frame_as_xyzrpy(self, link_name:str=None, reference_frame:str=None, ros_time:rclpy.time.Time=None, print=False) -> list:
+        """ Get the pose of a link as a list of 6 floats (xyzrpy)
+
+        :param link_name: The name of the link to be queried, defaults to the end-effector
+        :type link_name: str, optional
+        :param reference_frame: The name of the frame of reference, defaults to the world/default
+        :type reference_frame: str, optional
+        :param ros_time: The time when the pose is queried, defaults to current time
+        :type ros_time: rclpy.time.Time, optional
+        :param print: Sends the information to the output as well, defaults to False
+        :type print: bool, optional
+        :raises ValueError: when the names of the link_name or reference_frame is invalid
+        :return: The pose in the format of a list of 6 floats (xyzrpy)
+        :rtype: list
+        """
+        # Initial setup
+        link_name = self.end_effector_link if link_name is None else link_name
+        ros_time = rclpy.time.Time() if ros_time is None else ros_time
+        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame 
+
+        # Request 7 float list of pose
+        pose = self.pose_in_frame_as_xyzq(link_name, reference_frame, ros_time)
+
+        # Extract and extend list with rpy information
+        xyzrpy = pose[:3]
+        xyzrpy.extend(tf_transformations.euler_from_quaternion(pose[3:]))
+        if print: 
+            self.logger.info(f'[ArmCommander::pose_in_frame_as_xyzrpy][pose of {link_name} from {reference_frame}: {xyzrpy}]')
+        return xyzrpy
+    
+    def pose_in_frame(self, link_name:str=None, reference_frame:str=None, ros_time:rclpy.time.Time=None) -> PoseStamped:
+        """ Get the pose of a link as a PoseStamped
+
+        :param link_name: The name of the link to be queried, defaults to the end-effector
+        :type link_name: str, optional
+        :param reference_frame: The name of the frame of reference, defaults to the world/default
+        :type reference_frame: str, optional
+        :param ros_time: The time when the pose is queried, defaults to current time
+        :type ros_time: rclpy.tim.Time, optional
+        :raises ValueError: when the names of the link_name or reference_frame is invalid
+        :return: The pose as a PoseStamped
+        :rtype: PoseStamped
+        """
+        # Initial setup
+        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame        
+        link_name = self.end_effector_link if link_name is None else link_name
+        ros_time = rclpy.time.Time() if ros_time is None else ros_time
+
+        # Request 7 float list of pose
+        xyzq = self.pose_in_frame_as_xyzq(link_name, reference_frame, ros_time)
+
+        # Construct PoseStamped Message
+        # NOTE: time stamp populated from node handle
+        pose_stamped_out = PoseStamped()
+        pose_stamped_out.header.frame_id = reference_frame
+        pose_stamped_out.header.stamp = self.nh.get_clock().now().to_msg()
+
+        if len(xyzq) != 7:
+            self.logger.error(f"[ArmCommander::pose_in_frame][size of xyzq is invalid: {len(xyzq)}]")
+            pose_stamped_out.pose = Pose()
+        else:
+            pose_stamped_out.pose.position.x = xyzq[0]
+            pose_stamped_out.pose.position.y = xyzq[1]
+            pose_stamped_out.pose.position.z = xyzq[2]
+            pose_stamped_out.pose.orientation.x = xyzq[3]
+            pose_stamped_out.pose.orientation.y = xyzq[4]
+            pose_stamped_out.pose.orientation.z = xyzq[5]
+            pose_stamped_out.pose.orientation.w = xyzq[6]
+
+        return pose_stamped_out
+        
+    def pose_of_robot_link(self, robot_link_name: str = None, print: bool = False) -> PoseStamped:
+        """Query the robot's link pose as a stamped message
 
         :param link_name: Name of link to query, defaults to None
         :type link_name: str, optional
         :param print: Debugging if True, defaults to False
         :type print: bool, optional
+        :return: Pose (geometry messages) in a pose stamped message
+        :rtype: PoseStamped
+        """
+        # Request pose of link from robot
+        pose = self._get_pose(link_name=robot_link_name)
+        
+        # Convert to a posestamped message
+        pose_stamped = PoseStamped()
+        pose_stamped.header.frame_id = self.WORLD_REFERENCE_LINK
+        pose_stamped.header.stamp = self.nh.get_clock().now().to_msg()
+        pose_stamped.pose = pose
+        return pose_stamped
+    
+    def rpy_of_robot_link(self, robot_link_name: str = None, print: bool = False) -> list:
+        """ Get the orientation of a link as a list of euler angles (rpy) in the default move_group planning frame
+
+        :param robot_link_name: The name of the link to be queried, defaults to the end-effector
+        :type robot_link_name: str, optional
+        :param print: Sends the information to the output as well, defaults to False
+        :type print: bool, optional
+        :return: The pose of a link as a list of euler angles (rpy) 
+        :rtype: list
+        """
+        if robot_link_name is None:
+            robot_link_name = self.end_effector_link
+
+        # Retrieve pose stamped message of requested link
+        pose = self._get_pose(link_name=robot_link_name)
+
+        # Convert to RPY
+        # NOTE: x,y,z,w quaternion order assumed
+        rpy = tf_transformations.euler_from_quaternion(
+            [
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w
+            ]
+        )
+        if print: self.logger.info(f"[ArmCommander::rpy_of_robot_link][{rpy}]")
+        return rpy
+        
+    def xyzrpy_of_robot_link(self, robot_link_name: str = None, print: bool = False) -> list:
+        """ Get the pose of a link as a list of 6 floats (xyzrpy) in the default move_group planning frame
+
+        :param robot_link_name: The name of the link to be queried, defaults to the end-effector
+        :type robot_link_name: str, optional
+        :param print: Sends the information to the output as well, defaults to False
+        :type print: bool, optional
+        :return: The pose of a link as a list of 6 floats (xyzrpy)
+        :rtype: list
+        """
+        if robot_link_name is None:
+            robot_link_name = self.end_effector_link
+            
+        # Retrieve pose of requested link
+        pose = self._get_pose(link_name=robot_link_name)
+
+        # Retrieve pose as rpy
+        rpy = self.rpy_of_robot_link(robot_link_name=robot_link_name)
+
+        # Construct xyzrpy list
+        xyzrpy = [
+            pose.position.x,
+            pose.position.y,
+            pose.position.z
+        ]
+        xyzrpy.extend(rpy)
+        if print: self.logger.info(f"[ArmCommander::xyzrpy_of_robot_link][{xyzrpy}]")
+        return xyzrpy
+    
+    def transform_pose(self, the_pose: PoseStamped, to_frame: str) -> PoseStamped:
+        """ Transorm a pose from the current frame of reference to another frame of reference
+
+        :param the_pose: The pose to be transformed
+        :type the_pose: PoseStamped
+        :param to_frame: The target frame of reference
+        :type to_frame: str
+        :return: The transformed pose
+        :rtype: PoseStamped
+        """
+        try:
+            transformed_pose = self.tf_buffer.transform(
+                object_stamped=the_pose,
+                target_frame=to_frame,
+                timeout=rclpy.duration.Duration(seconds=1.0)
+            )
+        except tf2_ros.ExtrapolationException as e:
+            self.logger.error(f"[ArmCommander::transform_pose][Extrapolation Error: {e}]")
+            raise
+
+        return transformed_pose
+    
+    # --- General Get Methods
+    def _get_pose(self, link_name: str = None, print: bool = False) -> Pose():
+        """Internal method to get the pose of the robot
+
+        :param link_name: Name of link to query, defaults to None
+        :type link_name: str, optional
+        :param print: debugging if True
+        :type print: bool, optional 
         :return: Pose (geometry messages)
         :rtype: Pose
         """
-        # Check if move_group is valid
         if self.is_move_group_valid() and self.is_ee_link_valid():
             # Default to end-effector link if not defined
             if link_name is None:
                 link_name = self.end_effector_link
-            self.logger.info(f"Checking for Link: {link_name}")
 
             # Get the current pose from the robot state
             robot_state = RobotState(self.robot.get_robot_model())
             robot_state.update()
 
-            current_pose = robot_state.get_pose(link_name)
-            if print: self.logger.info(f"[ArmCommander::get_current_link_pose][current_pose: {current_pose}]")
-            return current_pose
+            pose = robot_state.get_pose(link_name)
+            if print: self.logger.info(f"[ArmCommander::_get_pose][Link {link_name} has current_pose: {pose}]")
         else:
-            self.logger.error(f"[ArmCommander::get_current_link_pose][Move group or end-effector link invalid]")
-            return Pose()
-        
-    # # --- General Get Methods
-    # def get_latest_feedback(self) -> MoveGroupActionFeedback:
-    #     """Gets the latest feedback message cached from callback
+            self.logger.error(f"[ArmCommander::_get_pose][Move group or end-effector link invalid]")
+            pose = Pose()
 
-    #     :return: Move group cached feedback message
-    #     :rtype: MoveGroupActionFeedback
-    #     """
-    #     return self.cached_result
+        return pose
     
-    def get_commander_state(self, print: bool = False) -> CommanderStates:
-        """Gets the agent's state
+    def info(self, print: bool = False) -> str:
+        """TODO: Essential information for display
 
-        :param print: Prints the agent state name if True, defaults to False
+        :param print: Sends the information to the output, defaults to False
         :type print: bool, optional
-        :return: Robot agent state
+        :return: Formatted information of the commander
+        :rtype: str
+        """
+        nyi = "Not Yet Implemented"
+        string_list = [
+        f'> group name: {self.GROUP_NAME}',
+        f'> planning time: {nyi}',
+        f'> pose reference frame: {self.WORLD_REFERENCE_LINK}',   
+        f'> end-effector:\t\nlinks: {self.end_effector_link}',
+        f'> pose: {self.pose_of_robot_link().pose}',
+        f'> roll, pitch, yaw: {nyi}',
+        f'> goal tolerance (joint, position, orientation): {nyi}'
+        ]
+        output = '\n'.join(string_list)
+        if print:
+            self.logger.info(output)
+        return output
+    
+    def get_latest_moveit_feedback(self) -> None:
+        """Get the latest feedback resulting from the last command
+
+        :return: The latest action feedback of the last call to the underlying move commander
+        :rtype: None
+        """
+        self.logger.warn(f"[ArmCommander::get_latest_moveit_feedback][Not Yet Implemented]")
+        return self.cached_result
+    
+    def get_commander_state(self, print=False) -> CommanderStates:
+        """Get the current state of this general commander
+
+        :param print: Sends the state to the output as well, defaults to False
+        :type print: bool, optional
+        :return: The current state of this general commander
         :rtype: CommanderStates
         """
-        if print: self.logger.info(f"[ArmCommander::get_commander_state][name: {self.commander_state.name}]")
-        return self.action_state
+        if print:
+            self.logger.info(self.commander_state.name)
+        return self.commander_state
+    
+    def get_error_code(self, print=False) -> None:
+        """Get the error code of resulting from the last command
+
+        :param print: Sends the error code to the output as well, defaults to False
+        :type print: bool, optional
+        :return: The error code of the last command
+        :rtype: None
+        """
+        self.logger.warn(f"[ArmCommander::get_error_code][Not Yet Implemented]")
+        if self.cached_result is None:
+            return None
+        if print:
+            # TODO: implement this as a version of MoveitErrorCodes
+            pass
+
+        return None #self.cached_result.result.error_code 
+    
+    def get_goal_tolerance(self) -> list:
+        """ Get the current goal tolerance
+
+        :return: A list of current joint, position and orientation goal tolerances
+        :rtype: list
+        """
+        self.logger.warn(f"[ArmCommander::get_goal_tolerance][Not Yet Implemented]")
+        return None #self.move_group.get_goal_tolerance()
 
     # --- General Set Methods
-    def set_ee_link(self, link_name=None) -> bool:
+    def set_max_cartesian_speed(self, max_speed: float = None):
+        """Set the maximum speed of the end-effector motion
+
+        :param max_speed: The maximum speed in meters per seconds, defaults to the system default speed
+        :type max_speed: float, optional
+        """
+        self.logger.warn(f"[ArmCommander::set_max_cartesian_speed][Not Yet Implemented]")
+
+        # if max_speed is None:
+        #     self.move_group.clear_max_cartesian_link_speed()
+        # else:
+        #     self.move_group.limit_max_cartesian_link_speed(max_speed, self.end_effector_link)
+
+    
+    # set the maximum planning time (in seconds)
+    def set_planning_time(self, planning_time: int):
+        """Set the maximum planning time
+
+        :param planning_time: The maximum planning time in seconds
+        :type planning_time: int
+        """
+        self.logger.warn(f"[ArmCommander::set_planning_time][Not Yet Implemented]")
+        # self.move_group.set_planning_time(planning_time)
+    
+    # set the goal tolerance (a list of joint, position and orientation goal tolerances)
+    def set_goal_tolerance(self, tol_list: list): 
+        """Set the goal tolerance 
+
+        :param tol_list: set the goal tolerance as a list of joint, position and orientation goal tolerances
+        :type tol_list: list
+        """
+        self.logger.warn(f"[ArmCommander::set_goal_tolerance][Not Yet Implemented]")
+        # self.move_group.set_goal_tolerance(tol_list) 
+
+    def set_ee_link(self, link_name = None) -> bool:
         """Sets the end-effector (ee) link through move_group
 
         :return: True if successful, else False
