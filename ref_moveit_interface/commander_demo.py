@@ -14,8 +14,9 @@ __status__ = 'Development'
 import signal, sys, rclpy, ament_index_python, threading
 
 # project modules
-from ref_moveit_interface.commander import ArmCommander
-from moveit.planning import MoveItPy
+# from ref_moveit_interface.commander_moveitpy import ArmCommander
+from ref_moveit_interface.commander_move_group import ArmCommander
+# from moveit.planning import MoveItPy
 from rclpy.logging import get_logger
 
 __path__ = ament_index_python.packages.get_package_share_directory('ref_moveit_interface')
@@ -40,7 +41,7 @@ class CommanderDemo():
             # Validate setup
             self.logger.info(f"Move Group: {self.commander.is_move_group_valid()}")
             self.logger.info(f"EE Link: {self.commander.is_ee_link_valid()}")
-            self.logger.info(self.commander.info())
+            # self.logger.info(self.commander.info())
 
             # Via ROS transform buffer
             xyzq = self.commander.pose_in_frame_as_xyzq(link_name='tool0')
@@ -51,22 +52,23 @@ class CommanderDemo():
             self.logger.info(f"POSE STAMPED: {pose_stamped}")
 
             # Specifically from robot
-            pose_of_robot_link = self.commander.pose_of_robot_link(robot_link_name='tool0')
-            rpy_of_robot_link = self.commander.rpy_of_robot_link(robot_link_name='tool0')
-            xyzrpy_of_robot_link = self.commander.xyzrpy_of_robot_link(robot_link_name='tool0')
-            self.logger.info(f"POSE OF ROBOT LINK: {pose_of_robot_link}")
-            self.logger.info(f"RPY OF ROBOT LINK: {rpy_of_robot_link}")
-            self.logger.info(f"XYZRPY OF ROBOT LINK: {xyzrpy_of_robot_link}")
+            # pose_of_robot_link = self.commander.pose_of_robot_link(robot_link_name='tool0')
+            # rpy_of_robot_link = self.commander.rpy_of_robot_link(robot_link_name='tool0')
+            # xyzrpy_of_robot_link = self.commander.xyzrpy_of_robot_link(robot_link_name='tool0')
+            # self.logger.info(f"POSE OF ROBOT LINK: {pose_of_robot_link}")
+            # self.logger.info(f"RPY OF ROBOT LINK: {rpy_of_robot_link}")
+            # self.logger.info(f"XYZRPY OF ROBOT LINK: {xyzrpy_of_robot_link}")
 
             # Attempt to move to Home pose
-            self.commander.move_to_named_pose(named_pose="home", wait=True)
+            # self.commander.move_to_named_pose(named_pose="home", wait=True)
 
             # Attempt to move to a position
+            self.commander.move_to_position(x=1.6, y=0.5, z=1.0, wait=True, cartesian=False)
+            self.commander.reset_state()
             self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=True)
+            self.commander.reset_state()
 
-
-
-            self.commander.shutdown()
+            # self.commander.shutdown()
         except Exception as e:
             self.logger.error(e)
 

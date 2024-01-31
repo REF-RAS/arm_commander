@@ -239,7 +239,7 @@ class ArmCommander():
             # Check if there are controllers to execute
             tem = self.robot.get_trajactory_execution_manager()
             if not tem.ensure_active_controllers_for_group(self.GROUP_NAME):
-                self.logger.error(f"ERROR -> no active controllers")
+                self.logger.error(f"[ArmCommander::plan_and_execute][No active controllers]")
                 return None
             
             # Execute the trajectory with no wait
@@ -334,10 +334,8 @@ class ArmCommander():
             # waypoints = [current_in_world_frame.pose, target_in_world_frame.pose]
             self.commander_state = CommanderStates.BUSY
 
-            req = self.move_group.get_motion_plan_request()
-
             robot_state = RobotState(self.robot.get_robot_model())
-            robot_state.compute_cartesian_path()
+            # robot_state.compute_cartesian_path()
             # plan_result = self.move_group.set_path_constraints(target_pose)
             # self.logger.info(f"MOVE TO POSITION Waypoints: {waypoints}")
             # (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE, 0.00) 
