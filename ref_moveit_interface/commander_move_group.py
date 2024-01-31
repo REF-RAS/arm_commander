@@ -11,17 +11,13 @@ __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
 # --- General Imports
-import sys, copy, threading, time, signal, math, rclpy
+import sys, copy, threading, time, signal, math, rclpy, traceback
 import timeit, tf2_ros, tf_transformations
 
 from rclpy.logging import get_logger
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
 from rclpy.action import ActionClient
-from rclpy.callback_groups import ReentrantCallbackGroup, CallbackGroup
-# --- Import moveit_py bindings to moveit core (Official)
-# from moveit.core.robot_state import RobotState
-# from moveit.core.controller_manager import ExecutionStatus
-# from moveit.planning import MoveItPy
+from rclpy.callback_groups import ReentrantCallbackGroup
 
 # --- Import ROS Messages
 from moveit_msgs.msg import (
@@ -49,7 +45,7 @@ from trajectory_msgs.msg import JointTrajectory
 from control_msgs.action import FollowJointTrajectory
 
 # Import State Definitions
-from ref_moveit_interface.states import CommanderStates 
+from ref_moveit_interface.states import CommanderStates, ConstraintOptions
 
 class ArmCommander():
     def __init__(self, 
@@ -64,9 +60,10 @@ class ArmCommander():
         # --- Create lock for synchronization
         self._action_lock = threading.Lock()
         self._future = threading.Event()
+        self._cb_execute_goal_handle = None
 
         # --- Define constants (should import from config)
-        self.CARTE_PLANNING_STEP_SIZE = 0.01  # meters
+        self.CARTE_PLANNING_STEP_SIZE = 0.0001  # meters
         self.GROUP_NAME = moveit_group_name
 
         # --- initialize Moveit! variables 
@@ -191,6 +188,9 @@ class ArmCommander():
         # --- Set an internal timeout
         # NOTE: may have an alternative implementation
         self._timer = None
+
+        # --- Named Pose Handling
+        self._named_poses: dict = None
     
     # --- Internal Methods
     def _move_default_goal(
@@ -231,7 +231,7 @@ class ArmCommander():
         move_goal.request.max_velocity_scaling_factor = 0.1
         move_goal.request.max_acceleration_scaling_factor = 0.1
         move_goal.request.cartesian_speed_end_effector_link = end_effector
-        move_goal.request.max_cartesian_speed = 0.1 #m/s
+        move_goal.request.max_cartesian_speed = 0.01 #m/s
         
         # --- Planning setup
         move_goal.planning_options.plan_only = False
@@ -299,6 +299,29 @@ class ArmCommander():
             f"[ArmCommander::_cb_handle_result_status][Not Yet Implemented]"
         )
 
+    def _cb_execute_move_action(self, outcome) -> None:
+        """Callback from a move_group Execution Request
+
+        :param outcome: _description_
+        :type outcome: _type_
+        """
+        goal_handle = outcome.result()
+        if not goal_handle.accepted:
+            self._logger.warn(
+                f"[ArmCommander::_cb_execute_move_action][<{self._move_action_client._action_name}> was rejected]"
+            )
+            return None
+        
+        # Track handle for abort call
+        self._cb_execute_goal_handle = goal_handle
+
+        # Get result from execution
+        self._logger.info(
+            f"[ArmCommander::_cb_execute_move_action][<{self._move_action_client._action_name}> getting result...]"
+        )
+        get_result_future = goal_handle.get_result_async()
+        get_result_future.add_done_callback(self._cb_execute_move_action_result)
+
     def _cb_execute(self, outcome) -> None:
         """Callback to Trajectory Execution Manager execution call
 
@@ -313,6 +336,9 @@ class ArmCommander():
             )
             return None
         
+        # Track handle for abort call
+        self._cb_execute_goal_handle = goal_handle
+
         # Get the result from the execution
         self._logger.info(
             f"[ArmCommander::_cb_execute][{self._follow_jt_action_client._action_name} getting result...]"
@@ -339,6 +365,25 @@ class ArmCommander():
 
             self._commander_state = CommanderStates.SUCCEEDED
 
+    def _cb_execute_move_action_result(self, future):
+        """Callback to result from Move Group Trajectory Execution
+
+        :param future: Result Future
+        :type future: _type_
+        """
+        if future.result().status != GoalStatus.STATUS_SUCCEEDED:
+            self._logger.error(
+                f"[ArmCommander::_cb_execute_move_action_result][{self._move_action_client._action_name} was unsuccessful <{future.result().status}>]"
+            )
+
+            self._commander_state = CommanderStates.ERROR
+        else:
+            self._logger.info(
+                f"[ArmCommander::_cb_execute_move_action_result][{self._move_action_client._action_name} SUCCEEDED]"
+            )
+
+            self._commander_state = CommanderStates.SUCCEEDED
+
     def _cb_execute_set_event(self, outcome) -> None:
         """Callback to Trajectory Execution call (on event wait)
 
@@ -353,19 +398,75 @@ class ArmCommander():
         self._cb_execute(outcome=outcome)
         self._future.set()
 
+    def _cb_execute_cancel(self, future) -> None:
+        """Callback on goal cancel request
+
+        :param future: _description_
+        :type future: _type_
+        :raises ValueError: _description_
+        :return: _description_
+        :rtype: _type_
+        """
+        cancel_resp = future.result()
+        if len(cancel_resp.goals_canceling) > 0:
+            self._commander_state = CommanderStates.ABORTED
+            self._logger.info(
+                f"[ArmCommander::_cb_execute_cancel][Goal Cancelled Successfully]"
+            )
+        else:
+            self._commander_state = CommanderStates.ERROR
+            self._logger.error(
+                f"[ArmCommander::_cb_execute_cancel][Failed]"
+            )
+
     # --- Utility Methods
+    def add_named_pose(self, name: str, joint_values: list) -> None:
+        """Utility method to add a new named pose
+
+        :param name: Key name of joints for future use
+        :type name: str
+        :param joint_values: Joint values of robot to save
+        :type joint_values: list
+        """
+        if name in self._named_poses.keys():
+            self._logger.warn(
+                f"[ArmCommander::add_named_pose][<{name}> already saved]"
+            )
+        
+        # Set new named key with joint values
+        self._logger.info(
+            f"[ArmCommander::add_named_pose][Added <{name}> with joints: {joint_values}]"
+        )
+        self._named_poses[name] = joint_values
+
+    def forget_named_pose(self, name: str) -> None:
+        """Utility method to remove/forget a named pose
+
+        :param name: Key name of joints saved
+        :type name: str
+        """
+        if name not in self._named_poses.keys():
+            self._logger.warn(
+                f"[ArmCommander::forget_named_pose][<{name}> not in saved list to forget]"
+            )
+        
+        self._logger.info(
+            f"[ArmCommander::forget_named_pose][Forgetting <{name}>]"
+        )
+        del self._named_poses[name]
+
     def spin(self) -> None:
         """Spins up the ROS2 Node
         """
         rclpy.spin(self._nh)
 
     def shutdown(self) -> None:
-        """Shutdown command for moveit_py
+        """Shutdown command for ROS2
 
         :return: None
         :rtype: None
         """
-        if self.robot: self.robot.shutdown()
+        rclpy.shutdown()
 
     def reset_state(self) -> None:
         """Reset of states and variables on command
@@ -373,6 +474,10 @@ class ArmCommander():
         :return: None
         :rtype: None
         """
+        # -- Debugging check on current state (prior to reset)
+        self._logger.info(
+            f"[ArmCommander::reset_state][Resetting from <{self._commander_state}>]"
+        )
         # -- set state
         self._commander_state = CommanderStates.READY
         self._cached_result = None 
@@ -398,22 +503,20 @@ class ArmCommander():
         :return: True on success, else False
         :rtype: bool
         """
-        if self.is_move_group_valid():
-            # Get the Trajectory Execution Manager
-            tem = self.robot.get_trajactory_execution_manager()
-
-            # Request execution stop
-            tem.stop_execution()
-
-            self._logger.info(f"[ArmCommander::abort_move][Execution Stopped]")
-            
-            # if wait:
-            #     self.wait_while_busy()
-            self.reset_state()
-            
-            return True
+        # Request stop if in motion
+        if self._cb_execute_goal_handle:
+            future = self._cb_execute_goal_handle.cancel_goal_async()
+            future.add_done_callback(self._cb_execute_cancel)
+            self._logger.info(f"[ArmCommander::abort_move][Stop Requested]")
         else:
-            return False
+            self._logger.warn(f"[ArmCommander::abort_move][Nothing to Stop]")
+        
+        if wait:
+            self.wait_for_busy_end()
+
+        self.reset_state()
+        
+        return True
     
     # --- Robot Movement Methods
     def _execute(self, trajectory: JointTrajectory = None, wait: bool = False) -> None:
@@ -467,10 +570,43 @@ class ArmCommander():
             self._logger.warn(
                 f"[ArmCommander::_execute][Trajectory/plan is invalid]"
             )
+    
+    def _plan_and_execute_move_group(self, plan_only: bool = False) -> None:
+        """Planning call to move_group
 
-    def _plan(self, cartesian: bool = False, target_pose: PoseStamped = None) -> JointTrajectory:
+        :param plan_only: Flag to do only planning and no execution
+        :type plan_only: bool, optional
+        :return: None
+        :rtype: None
+        """
+        # --- Set current planning options
+        self._move_action_goal.planning_options.plan_only = plan_only
+        self._move_action_goal.request.workspace_parameters.header.stamp = self._nh.get_clock().now().to_msg()
+
+        # --- Check for service ready
+        if not self._move_action_client.wait_for_server(timeout_sec=1.0):
+            self._logger.warn(
+                f"[ArmCommander::_execute_move_group][<{self._move_action_client._action_name}> Not Ready]"
+            )
+            return None
+    
+        # --- Send goal for plan/execution/both
+        move_action_resp = self._move_action_client.send_goal_async(
+            goal=self._move_action_goal,
+            feedback_callback=None,
+        )
+
+        move_action_resp.add_done_callback(self._cb_execute_move_action)
+
+    def _plan(self, 
+            accept_fraction: float = 0.9999, 
+            cartesian: bool = False, 
+            target_pose: PoseStamped = None) -> JointTrajectory:
         """Class method to plan for a trajectory execution
 
+        NOTE: may not be needed at this level of abstraction
+        :param accept_fraction: the acceptable minimum fraction of the planned path, defaults to 0.9999
+        :type accept_fraction: float, optional
         :param cartesian: Plan a cartesian path if True
         :type cartesian: bool, optional
         :param target_pose: Target pose that has been requested
@@ -485,85 +621,178 @@ class ArmCommander():
             )
             return plan
         
+        # --- Construct a plan request depending on cartesian or kinematic request
         if cartesian:
             # --- Setup cartesian path request
-            self._logger.info(
-                f"[ArmCommander::_plan][CARTESIAN path requested!]"
-            )
-            cart_req = GetCartesianPath.Request()
-            cart_req.start_state = self._move_action_goal.request.start_state
-            cart_req.group_name = self._move_action_goal.request.group_name
-            cart_req.link_name = self._end_effector_link
-            cart_req.max_step = self.CARTE_PLANNING_STEP_SIZE
-            cart_req.header.frame_id = self.WORLD_REFERENCE_LINK
-            cart_req.header.stamp = self._nh.get_clock().now().to_msg()
-            cart_req.path_constraints = self._move_action_goal.request.path_constraints
-            cart_req.waypoints = [target_pose.pose]
-
-            # --- Update each constraint stamp
-            for con in cart_req.path_constraints.position_constraints:
-                con.header.stamp = self._nh.get_clock().now().to_msg()
-            for con in cart_req.path_constraints.orientation_constraints:
-                con.header.stamp = self._nh.get_clock().now().to_msg()
-
-            # --- Check if service is available and send path request            
-            if not self._plan_cartesian_path_srv.wait_for_service(timeout_sec=1):
-                self._logger.warn(
-                    f"[ArmCommander::_plan][Cartesian plan service unavailable"
-                )
-                return None
-            
-            resp = self._plan_cartesian_path_srv.call(cart_req)
-
-            if resp.error_code.val == MoveItErrorCodes.SUCCESS:
-                plan = resp.solution.joint_trajectory
-                self._logger.info(
-                    f"[ArmCommander::_plan][CARTESIAN path determined]"
-                )
-                return plan
-            else:
-                self._logger.warn(
-                    f"[ArmCommander::_plan][Could not plan cartesian path <{resp.error_code.val}>]"
-                )
-                return None
+            return self._plan_cartesian_path(target_pose=target_pose, accept_fraction=accept_fraction)
         else:
             # --- Setup a normal motion path request
-            self._logger.info(
-                f"[ArmCommander::_plan][KINEMATIC path requested!]"
+            return self._plan_kinematic_path()
+            
+    def _plan_cartesian_path(self, target_pose: PoseStamped, accept_fraction: float = 0.9999) -> JointTrajectory:
+        """Internal method to plan a cartesian path (for direct controller usage)
+
+        :param target_pose: Target pose to aim for
+        :type target_pose: PoseStamped
+        :param accept_fraction: the acceptable minimum fraction of the planned path, defaults to 0.9999
+        :type accept_fraction: float, optional
+        :return: Joint trajectory of a successful plan (None otherwise)
+        :rtype: JointTrajectory
+        """
+        self._logger.info(
+            f"[ArmCommander::_plan_cartesian_path][CARTESIAN path requested!]"
+        )
+        cart_req = GetCartesianPath.Request()
+        cart_req.start_state = self._move_action_goal.request.start_state
+        cart_req.group_name = self._move_action_goal.request.group_name
+        cart_req.link_name = self._end_effector_link
+        cart_req.max_step = self.CARTE_PLANNING_STEP_SIZE
+        cart_req.header.frame_id = self.WORLD_REFERENCE_LINK
+        cart_req.header.stamp = self._nh.get_clock().now().to_msg()
+        cart_req.path_constraints = self._move_action_goal.request.path_constraints
+        cart_req.waypoints = [target_pose.pose]
+        cart_req.avoid_collisions = True
+
+        # --- Update each constraint stamp
+        for con in cart_req.path_constraints.position_constraints:
+            con.header.stamp = self._nh.get_clock().now().to_msg()
+        for con in cart_req.path_constraints.orientation_constraints:
+            con.header.stamp = self._nh.get_clock().now().to_msg()
+
+        # --- Check if service is available and send path request            
+        if not self._plan_cartesian_path_srv.wait_for_service(timeout_sec=1):
+            self._logger.warn(
+                f"[ArmCommander::_plan_cartesian_path][Cartesian plan service unavailable"
             )
-            kine_req = GetMotionPlan.Request()
-            kine_req.motion_plan_request = self._move_action_goal.request
-            kine_req.motion_plan_request.workspace_parameters.header.stamp = self._nh.get_clock().now().to_msg()
+            return None
+        
+        resp = self._plan_cartesian_path_srv.call(cart_req)
 
-            # --- Update each constraint stamp
-            for con in kine_req.motion_plan_request.goal_constraints:
-                for pos_con in con.position_constraints:
-                    pos_con.header.stamp = self._nh.get_clock().now().to_msg()
-                for rot_con in con.orientation_constraints:
-                    rot_con.header.stamp = self._nh.get_clock().now().to_msg()
+        if resp.error_code.val == MoveItErrorCodes.SUCCESS:
+            plan = resp.solution.joint_trajectory
+            self._logger.info(
+                f"[ArmCommander::_plan_cartesian_path][CARTESIAN path determined!]"
+            )
 
-            # --- Check if service is available and send motion request
-            if not self._plan_kinematic_path_srv.wait_for_service(timeout_sec=1):
+            # --- Validate acceptable fraction
+            if resp.fraction < accept_fraction:
                 self._logger.warn(
-                    f"[ArmCommander::_plan][Kinematic plan service unavailable"
-                )
-                return None
-
-            resp = self._plan_kinematic_path_srv.call(kine_req).motion_plan_response
-
-            if resp.error_code.val == MoveItErrorCodes.SUCCESS:
-                plan = resp.trajectory.joint_trajectory
-                self._logger.info(
-                    f"[ArmCommander::_plan][KINEMATIC path determined]"
-                )
-                return plan
-            else:
-                self._logger.warn(
-                    f"[ArmCommander::_plan][Could not plan kinematic path <{resp.error_code.val}>]"
+                    f"[ArmCommander::_plan_cartesian_path][CARTESIAN Fraction Invalid <{resp.fraction}> less than <{accept_fraction}>]"
                 )
                 self._commander_state = CommanderStates.ABORTED
                 return None
 
+            return plan
+        else:
+            self._logger.warn(
+                f"[ArmCommander::_plan_cartesian_path][Could not plan cartesian path <{resp.error_code.val}>]"
+            )
+            return None
+    
+    def _plan_kinematic_path(self) -> JointTrajectory:
+        """Internal method to plan a kinematic path (for direct controller usage)
+
+        :return: Joint trajectory of a successful plan (None otherwise)
+        :rtype: JointTrajectory
+        """
+        self._logger.info(
+            f"[ArmCommander::_plan_kinematic_path][KINEMATIC path requested!]"
+        )
+        kine_req = GetMotionPlan.Request()
+        kine_req.motion_plan_request = self._move_action_goal.request
+        kine_req.motion_plan_request.workspace_parameters.header.stamp = self._nh.get_clock().now().to_msg()
+
+        # --- Update each constraint stamp
+        for con in kine_req.motion_plan_request.goal_constraints:
+            for pos_con in con.position_constraints:
+                pos_con.header.stamp = self._nh.get_clock().now().to_msg()
+            for rot_con in con.orientation_constraints:
+                rot_con.header.stamp = self._nh.get_clock().now().to_msg()
+
+        # --- Check if service is available and send motion request
+        if not self._plan_kinematic_path_srv.wait_for_service(timeout_sec=1):
+            self._logger.warn(
+                f"[ArmCommander::_plan_kinematic_path][Plan service unavailable"
+            )
+            return None
+
+        resp = self._plan_kinematic_path_srv.call(kine_req).motion_plan_response
+
+        if resp.error_code.val == MoveItErrorCodes.SUCCESS:
+            plan = resp.trajectory.joint_trajectory
+            self._logger.info(
+                f"[ArmCommander::_plan_kinematic_path][Path determined!]"
+            )
+            return plan
+        else:
+            self._logger.warn(
+                f"[ArmCommander::_plan_kinematic_path][Could not plan path <{resp.error_code.val}>]"
+            )
+            self._commander_state = CommanderStates.ABORTED
+            return None
+
+    def _set_constraints(
+            self,
+            type: ConstraintOptions = ConstraintOptions.POSITION, 
+            target_pose: PoseStamped = None,
+            joint_poses: list[float] = None,
+            tolerance: float = 0.001,
+            weight: float = 0.1) -> None:
+        """Sets position constraints based on inputs
+
+        :param type: Constraint type to set [Position, Orientation]
+        :type type: ConstraintOptions
+        :param target_pose: Target pose to set, defaults to None
+        :type target_pose: PoseStamped
+        :param tolerance: Goal tolerance (m), defaults to 0.001
+        :type tolerance: float, optional
+        :param weight: Weight of goal, defaults to 0.1
+        :type weight: float, optional
+        """
+        if type == ConstraintOptions.POSITION:
+            con = PositionConstraint()
+        elif type == ConstraintOptions.ORIENTATION:
+            con = OrientationConstraint()
+        elif type == ConstraintOptions.JOINT:
+            # Utilised more below
+            pass
+        else:
+            self._logger.warn(
+                    f"[ArmCommander::_set_constraints][Unknown Constraint type: {type}]"
+                )
+            return None
+        
+        # --- Common settings
+        con.header.frame_id = self.WORLD_REFERENCE_LINK
+        con.link_name = self._end_effector_link
+
+        if type == ConstraintOptions.POSITION:
+            con.constraint_region.primitive_poses.append(Pose())
+            con.constraint_region.primitive_poses[0].position = target_pose.pose.position
+            # Define goal region as sphere of radius tolerance
+            con.constraint_region.primitives.append(SolidPrimitive())
+            con.constraint_region.primitives[0].type = 2 #Sphere
+            con.constraint_region.primitives[0].dimensions = [tolerance] #m
+            con.weight = weight
+            self._move_action_goal.request.goal_constraints[-1].position_constraints.append(con)
+        elif type == ConstraintOptions.ORIENTATION:
+            con.orientation = target_pose.pose.orientation
+            # Defin goal tolerances
+            con.absolute_x_axis_tolerance = 0.001
+            con.absolute_y_axis_tolerance = 0.001
+            con.absolute_z_axis_tolerance = 0.001
+            con.weight = weight
+            self._move_action_goal.request.goal_constraints[-1].orientation_constraints.append(con)
+        elif type == ConstraintOptions.JOINT:
+            # --- Iterate through each joint and add constraint
+            for i in range(len(joint_poses)):
+                con = JointConstraint()
+                con.position = joint_poses[i]
+                con.tolerance_above = tolerance
+                con.tolerance_below = tolerance
+                con.weight = weight
+                self._move_action_goal.request.goal_constraints[-1].joint_constraints.append(con)
+            
     def move_to_named_pose(self, named_pose: str = "", wait: bool = True) -> None:
         """Move to a Named Pose on Command
 
@@ -573,34 +802,123 @@ class ArmCommander():
         :type wait: bool, optional
         """
         self._action_lock.acquire()
+        try:
+            if self._commander_state != CommanderStates.READY:
+                self._logger.error(
+                    f"[ArmCommander::move_to_named_pose][Commander NOT READY]"
+                )
+                return None
 
-        # Check if move_group is valid
-        if self.is_move_group_valid():
-            try:
-                if self._commander_state != CommanderStates.READY:
-                    self._logger.error(f'[ArmCommander::move_to_named_pose][MoveitAgent move_to_named_pose: not READY state]')
-                    return None
+            # Get name from saved list (if available)
+            if named_pose not in self._named_poses.keys():
+                self._logger.error(
+                    f"[ArmCommander::move_to_named_pose][Cannot retreive joints for <{named_pose}>]"
+                )
+                return None
+            
+            # --- Set joint constraints
+            self._set_constraints(type=ConstraintOptions.JOINT, joint_poses=self._named_poses[named_pose])
 
-                # Set to plan from current state to provided goal state
-                self.move_group.set_start_state_to_current_state()
-                self.move_group.set_goal_state(configuration_name=named_pose)
-                self._commander_state = CommanderStates.BUSY    
+            # --- Create Default Plan and Execute  
+            # NOTE: Execute directly through move_group node
+            self._logger.info(
+                f"[ArmCommander::move_to_named_pose][Executing...]"
+            )
+            self._commander_state = CommanderStates.BUSY
+            self._plan_and_execute_move_group(plan_only=False) 
 
-                # --- Create Default Plan and Execute with/without Wait  
-                self._execute(wait=wait)
-                
-                self._logger.info(f'[ArmCommander::move_to_named_pose][Execution Requested]')           
-            finally:
-                self._action_lock.release()
-        else:
-            self._logger.error(f'[ArmCommander::move_to_named_pose][Move group is invalid]')
-            return None
+            # --- Clearing constraints for next cycle
+            self._move_action_goal.request.goal_constraints = [Constraints()]            
+        finally:
+            self._action_lock.release()
     
-    # command the robot arm to move the end effector to a position (x, y, z) optionally in a cartesian motion manner and 
-    # optionally in a particular frame of reference
-    def move_to_position(self, x:float=None, y:float=None, z:float=None, 
-                         accept_fraction:float=0.9999, cartesian=False, 
-                         reference_frame:str=None, wait=True):
+    def move_displacement(self,
+                        dx: float = 0.0, dy: float = 0.0, dz: float = 0.0,
+                        accept_fraction: float = 0.9999, wait: bool = True) -> Pose:
+        """Command the robot arm to move the end effector by a displacement (dx, dy, dz)
+        in a Cartesian motion manner
+
+        :param dx: Displacement in x, defaults to 0.0
+        :type dx: float, optional
+        :param dy: Displacement in y, defaults to 0.0
+        :type dy: float, optional
+        :param dz: Displacement in z, defaults to 0.0
+        :type dz: float, optional
+        :param accept_fraction: Acceptabl minimum fraction of planned path, defaults to 0.9999
+        :type accept_fraction: float, optional
+        :param wait: Wait call to block until completion (if True), defaults to True
+        :type wait: bool, optional
+        :return: The target pose
+        :rtype: Pose
+        """
+        self._action_lock.acquire()
+        try:
+            if self._commander_state != CommanderStates.READY:
+                self._logger.error(
+                    f"[ArmCommander::move_displacement][Commander NOT READY]"
+                )
+                return None
+            
+            # --- Get the current pose of the end-effector link
+            ee_pose: PoseStamped = self.pose_in_frame(
+                link_name=self._end_effector_link, 
+                reference_frame=self.WORLD_REFERENCE_LINK
+            )
+
+            # --- Copy and update current ee pose with displacement
+            target_pose = copy.deepcopy(ee_pose)
+            target_pose.pose.position.x += dx
+            target_pose.pose.position.y += dy
+            target_pose.pose.position.z += dz
+
+            self._logger.info(
+                f"[ArmCommander::move_displacement][Requested Plan and Execution on {target_pose.pose}]"
+            )
+
+            # --- Set position constraints
+            self._set_constraints(type=ConstraintOptions.POSITION, target_pose=target_pose)
+
+            # --- Set orientation constratins
+            self._set_constraints(type=ConstraintOptions.ORIENTATION, target_pose=target_pose)
+
+            # --- Set starting joint state (curent from callback)
+            # NOTE: this may not be available -> resulting in a failed plan
+            if self._joint_state is not None:
+                self._move_action_goal.request.start_state.joint_state = self._joint_state
+
+            # --- Request plan 
+            # NOTE: default cartesian request
+            plan = self._plan_cartesian_path(target_pose=target_pose, accept_fraction=accept_fraction)
+            if not plan:
+                self._logger.warn(
+                    f"[ArmCommander::move_displacement][Could not create plan]"
+                )
+                self._commander_state = CommanderStates.ABORTED
+                return None                
+
+            # --- Create Default Plan and Execute with/without Wait  
+            # NOTE: execute directly with controller
+            self._logger.info(
+                f"[ArmCommander::move_displacement][Executing...]"
+            )
+            self._commander_state = CommanderStates.BUSY
+            self._execute(trajectory=plan, wait=wait) 
+
+            # --- Clearing constraints for next cycle
+            self._move_action_goal.request.goal_constraints = [Constraints()]
+
+        except Exception as e:
+            self._logger.error(
+                f"[ArmCommander::move_displacement][System error <{e} {traceback.format_exc()}>]"
+            )
+            self._commander_state = CommanderStates.ABORTED
+            self._commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'
+        finally:
+            self._action_lock.release()
+
+    def move_to_position(self, x: float = None, y: float = None, z: float = None, 
+                         accept_fraction: float = 0.9999, cartesian: bool = False, 
+                         reference_frame: str = None, wait: bool = True) -> PoseStamped:
         """Command the robot arm to move the end effector to a position (x, y, z) optionally 
         in a cartesian motion manner and optionally in a specified frame of reference
 
@@ -619,7 +937,7 @@ class ArmCommander():
         :param wait: The call is blocked until the command has been completed, defaults to True
         :type wait: bool, optional
         :return: The target pose in the given reference frame
-        :rtype: Pose
+        :rtype: PoseStamped
         """
         if self._commander_state != CommanderStates.READY:
             self._logger.warn(
@@ -628,70 +946,57 @@ class ArmCommander():
             return None
         
         self._action_lock.acquire()
-
-        reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
-        target_pose:PoseStamped = self.pose_in_frame(self._end_effector_link, reference_frame)
-        target_pose.pose.position.x = x if x is not None else target_pose.pose.position.x
-        target_pose.pose.position.y = y if y is not None else target_pose.pose.position.y
-        target_pose.pose.position.z = z if z is not None else target_pose.pose.position.z
-        self._logger.info(
-            f"[ArmCommander::move_to_position][Requested Plan and Execution on {target_pose.pose}]"
-        )
-
-        # --- Set position constraints
-        con = PositionConstraint()
-        con.header.frame_id = self.WORLD_REFERENCE_LINK
-        con.link_name = self._end_effector_link
-        con.constraint_region.primitive_poses.append(Pose())
-        con.constraint_region.primitive_poses[0].position = target_pose.pose.position
-        # Define goal region as sphere of radius tolerance
-        con.constraint_region.primitives.append(SolidPrimitive())
-        con.constraint_region.primitives[0].type = 2 #Sphere
-        con.constraint_region.primitives[0].dimensions = [0.001] #m
-        # Set Weight
-        con.weight = 1.0
-        # Update move group goal constrant
-        self._move_action_goal.request.goal_constraints[-1].position_constraints.append(con)
-
-        # --- Set orientation constratins
-        con = OrientationConstraint()
-        con.header.frame_id = self.WORLD_REFERENCE_LINK
-        con.link_name = self._end_effector_link
-        con.orientation = target_pose.pose.orientation
-        # Defin goal tolerances
-        con.absolute_x_axis_tolerance = 0.001
-        con.absolute_y_axis_tolerance = 0.001
-        con.absolute_z_axis_tolerance = 0.001
-        # Set Weight
-        con.weight = 1.0
-        # Update move group goal constrant
-        self._move_action_goal.request.goal_constraints[-1].orientation_constraints.append(con)
-
-        # Set starting joint state (curent from callback)
-        # NOTE: this may not be available -> resulting in a failed plan
-        if self._joint_state is not None:
-            self._move_action_goal.request.start_state.joint_state = self._joint_state
-
-        # Request plan (cartesian or otherwise)
-        plan = self._plan(cartesian=cartesian, target_pose=target_pose)
-        if not plan:
-            self._logger.warn(
-                f"[ArmCommander::move_to_position][Could not create plan]"
+        try:
+            # --- Configure target pose from inputs
+            reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
+            target_pose: PoseStamped = self.pose_in_frame(self._end_effector_link, reference_frame)
+            target_pose.pose.position.x = x if x is not None else target_pose.pose.position.x
+            target_pose.pose.position.y = y if y is not None else target_pose.pose.position.y
+            target_pose.pose.position.z = z if z is not None else target_pose.pose.position.z
+            self._logger.info(
+                f"[ArmCommander::move_to_position][Requested Plan and Execution on {target_pose.pose}]"
             )
-            self._commander_state = CommanderStates.ABORTED
-            return None
 
-        # --- Create Default Plan and Execute with/without Wait  
-        self._logger.info(
-            f"[ArmCommander::move_to_position][Executing...]"
-        )
+            # --- Set position constraints
+            self._set_constraints(type=ConstraintOptions.POSITION, target_pose=target_pose)
 
-        self._commander_state = CommanderStates.BUSY
-        self._execute(trajectory=plan, wait=wait) 
+            # --- Set orientation constratins
+            self._set_constraints(type=ConstraintOptions.ORIENTATION, target_pose=target_pose)
 
-        # Clearing constraints for next cycle
-        self._move_action_goal.request.goal_constraints = [Constraints()]
+            # Set starting joint state (curent from callback)
+            # NOTE: this may not be available -> resulting in a failed plan
+            if self._joint_state is not None:
+                self._move_action_goal.request.start_state.joint_state = self._joint_state
 
+            # Request plan (cartesian or otherwise)
+            if cartesian:
+                plan = self._plan(cartesian=cartesian, accept_fraction=accept_fraction, target_pose=target_pose)
+                if not plan:
+                    self._logger.warn(
+                        f"[ArmCommander::move_to_position][Could not create plan]"
+                    )
+                    self._commander_state = CommanderStates.ABORTED
+                    return None                
+
+                # --- Create Default Plan and Execute with/without Wait  
+                self._logger.info(
+                    f"[ArmCommander::move_to_position][Executing...]"
+                )
+                self._commander_state = CommanderStates.BUSY
+                self._execute(trajectory=plan, wait=wait) 
+            else:
+                self._logger.info(
+                    f"[ArmCommander::move_to_named_pose][Executing...]"
+                )
+                self._commander_state = CommanderStates.BUSY
+                self._plan_and_execute_move_group(plan_only=False) 
+
+            # --- Clearing constraints for next cycle
+            self._move_action_goal.request.goal_constraints = [Constraints()]
+        except Exception as e:
+            self._logger.error(
+                f"[ArmCommander::move_to_position][System Error <{e} {traceback.format_exc()}>]"
+            )
         self._action_lock.release()
 
         return target_pose 

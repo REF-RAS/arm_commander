@@ -12,6 +12,7 @@ __status__ = 'Development'
 
 # general modules
 import signal, sys, rclpy, ament_index_python, threading
+import time
 
 # project modules
 # from ref_moveit_interface.commander_moveitpy import ArmCommander
@@ -51,22 +52,20 @@ class CommanderDemo():
             self.logger.info(f"XYZRPY: {xyzrpy}")
             self.logger.info(f"POSE STAMPED: {pose_stamped}")
 
-            # Specifically from robot
-            # pose_of_robot_link = self.commander.pose_of_robot_link(robot_link_name='tool0')
-            # rpy_of_robot_link = self.commander.rpy_of_robot_link(robot_link_name='tool0')
-            # xyzrpy_of_robot_link = self.commander.xyzrpy_of_robot_link(robot_link_name='tool0')
-            # self.logger.info(f"POSE OF ROBOT LINK: {pose_of_robot_link}")
-            # self.logger.info(f"RPY OF ROBOT LINK: {rpy_of_robot_link}")
-            # self.logger.info(f"XYZRPY OF ROBOT LINK: {xyzrpy_of_robot_link}")
-
             # Attempt to move to Home pose
             # self.commander.move_to_named_pose(named_pose="home", wait=True)
 
             # Attempt to move to a position
-            self.commander.move_to_position(x=1.6, y=0.5, z=1.0, wait=True, cartesian=False)
+            self.commander.move_to_position(x=1.6, y=0.5, z=1.0, wait=True, cartesian=True)
             self.commander.reset_state()
             self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=True)
             self.commander.reset_state()
+
+            # Attempt to move by a displacement of current ee pose
+            self.commander.move_displacement(dx=0.05, dz=0.1, wait=True)
+            self.commander.reset_state()
+
+
 
             # self.commander.shutdown()
         except Exception as e:

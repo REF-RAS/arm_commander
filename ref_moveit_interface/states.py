@@ -38,6 +38,11 @@ COMPLETION_STATES = [
     TaskStates.INVALID
 ] 
 
+class ConstraintOptions(Enum):
+    POSITION = 0
+    ORIENTATION = 1
+    JOINT = 2
+
 if __name__ == '__main__':
-    state = GeneralCommanderStates.BUSY
+    state = CommanderStates.BUSY
     print(state)
