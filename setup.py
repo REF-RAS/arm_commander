@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 from glob import glob
 import os
 
-package_name = 'ref_moveit_interface'
+package_name = 'arm_commander'
 
 setup(
     name=package_name,
@@ -23,7 +23,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'entry_point = ref_moveit_interface.commander_demo:main'
+            'entry_point = arm_commander.commander_demo:main'
         ]
     }
 )

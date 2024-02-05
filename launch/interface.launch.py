@@ -18,7 +18,7 @@ def generate_launch_description():
         .robot_description(file_path="config/abb_irb6700_200_260.urdf.xacro")
         .trajectory_execution(file_path="config/moveit_controllers.yaml")
         .moveit_cpp(
-            file_path=get_package_share_directory("ref_moveit_interface")
+            file_path=get_package_share_directory("arm_commander")
             + "/config/motion_planning.yaml"
         )
         .to_moveit_configs()
@@ -26,7 +26,7 @@ def generate_launch_description():
 
     moveit_py_node = Node(
         name="test",
-        package="ref_moveit_interface",
+        package="arm_commander",
         executable="entry_point",
         output="both",
         parameters=[moveit_config.to_dict()],

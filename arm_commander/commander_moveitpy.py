@@ -30,7 +30,7 @@ from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose, PoseStamped
 
 # Import State Definitions
-from ref_moveit_interface.states import CommanderStates 
+from arm_commander.states import CommanderStates 
 
 class ArmCommander():
     def __init__(self, 

@@ -16,11 +16,11 @@ import time
 
 # project modules
 # from ref_moveit_interface.commander_moveitpy import ArmCommander
-from ref_moveit_interface.commander_move_group import ArmCommander
+from arm_commander.commander_move_group import ArmCommander
 # from moveit.planning import MoveItPy
 from rclpy.logging import get_logger
 
-__path__ = ament_index_python.packages.get_package_share_directory('ref_moveit_interface')
+__path__ = ament_index_python.packages.get_package_share_directory('arm_commander')
 
 
 class CommanderDemo():
@@ -58,7 +58,7 @@ class CommanderDemo():
             # Attempt to move to a position
             self.commander.move_to_position(x=1.6, y=0.5, z=1.0, wait=True, cartesian=False)
             self.commander.reset_state()
-            self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=True)
+            self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=False)
             self.commander.reset_state()
 
             # Attempt to move by a displacement of current ee pose

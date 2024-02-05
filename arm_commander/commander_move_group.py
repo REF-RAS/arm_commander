@@ -58,7 +58,7 @@ from trajectory_msgs.msg import JointTrajectory
 from control_msgs.action import FollowJointTrajectory
 
 # Import State Definitions
-from ref_moveit_interface.states import (
+from arm_commander.states import (
     CommanderStates, 
     ConstraintOptions
 )
@@ -911,8 +911,8 @@ class ArmCommander():
             self._plan_and_execute_move_group(plan_only=False) 
 
             # --- Clearing constraints for next cycle
-            self._the_constraints = Constraints()
-            # self._move_action_goal.request.goal_constraints = [Constraints()]            
+            # self._the_constraints = Constraints()
+            self._move_action_goal.request.goal_constraints = [Constraints()]            
         finally:
             self._action_lock.release()
     
@@ -989,8 +989,8 @@ class ArmCommander():
             self._execute(trajectory=plan, wait=wait) 
 
             # --- Clearing constraints for next cycle
-            self._the_constraints = Constraints()
-            # self._move_action_goal.request.goal_constraints = [Constraints()]
+            # self._the_constraints = Constraints()
+            self._move_action_goal.request.goal_constraints = [Constraints()]
 
         except Exception as e:
             self._logger.error(
@@ -1054,31 +1054,31 @@ class ArmCommander():
                 self._move_action_goal.request.start_state.joint_state = self._joint_state
 
             # Request plan (cartesian or otherwise)
-            if cartesian:
-                plan = self._plan(cartesian=cartesian, accept_fraction=accept_fraction, target_pose=target_pose)
-                if not plan:
-                    self._logger.warn(
-                        f"[ArmCommander::move_to_position][Could not create plan]"
-                    )
-                    self._commander_state = CommanderStates.ABORTED
-                    return None                
+            # if cartesian:
+            plan = self._plan(cartesian=cartesian, accept_fraction=accept_fraction, target_pose=target_pose)
+            if not plan:
+                self._logger.warn(
+                    f"[ArmCommander::move_to_position][Could not create plan]"
+                )
+                self._commander_state = CommanderStates.ABORTED
+                return None                
 
-                # --- Create Default Plan and Execute with/without Wait  
-                self._logger.info(
-                    f"[ArmCommander::move_to_position][Executing...]"
-                )
-                self._commander_state = CommanderStates.BUSY
-                self._execute(trajectory=plan, wait=wait) 
-            else:
-                self._logger.info(
-                    f"[ArmCommander::move_to_named_pose][Executing...]"
-                )
-                self._commander_state = CommanderStates.BUSY
-                self._plan_and_execute_move_group(plan_only=False) 
+            # --- Create Default Plan and Execute with/without Wait  
+            self._logger.info(
+                f"[ArmCommander::move_to_position][Executing...]"
+            )
+            self._commander_state = CommanderStates.BUSY
+            self._execute(trajectory=plan, wait=wait) 
+            # else:
+            #     # self._logger.info(
+            #     #     f"[ArmCommander::move_to_named_pose][Executing...]"
+            #     # )
+            #     # self._commander_state = CommanderStates.BUSY
+            #     # self._plan_and_execute_move_group(plan_only=False) 
 
             # --- Clearing constraints for next cycle
-            self._the_constraints = Constraints()
-            # self._move_action_goal.request.goal_constraints = [Constraints()]
+            # self._the_constraints = Constraints()
+            self._move_action_goal.request.goal_constraints = [Constraints()]
 
         except Exception as e:
             self._logger.error(
