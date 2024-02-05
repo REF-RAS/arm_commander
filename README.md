@@ -1,6 +1,6 @@
 <!-- Created with QCR's code template tool: https://github.com/qcr/code_templates -->
 
-# ref_moveit_interface
+# arm_commander
 
 [![QUT Centre for Robotics Open Source](https://github.com/qcr/qcr.github.io/raw/master/misc/badge.svg)](https://qcr.github.io)
 
@@ -10,21 +10,21 @@ Replace REPO_USER, & REPO_NAME in the lines below to get more auto-generated bad
 [![License](https://img.shields.io/github/license/REPO_USER/REPO_NAME)](./BSD.txt)
 -->
 
-ref_moveit_interface is TODO what does your package do
+arm_commander is TODO what does your package do
 
 TODO image / gif showing off what your package does!
 
 ## Installation
 
-ref_moveit_interface can be installed by TODO description of how to install ref_moveit_interface
+arm_commander can be installed by TODO description of how to install arm_commander
 
 ## Usage
 
-ref_moveit_interface is used by TODO details / examples of how to use ref_moveit_interface
+arm_commander is used by TODO details / examples of how to use arm_commander
 
 ## Acknowledgments
 
-To use ref_moveit_interface, we just ask that you cite our paper
+To use arm_commander, we just ask that you cite our paper
 
 TODO insert ```bibtex code block for research associated with your package
 
