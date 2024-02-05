@@ -56,9 +56,9 @@ class CommanderDemo():
             # self.commander.move_to_named_pose(named_pose="home", wait=True)
 
             # Attempt to move to a position
-            self.commander.move_to_position(x=1.6, y=0.5, z=1.0, wait=True, cartesian=False)
+            self.commander.move_to_position(x=1.6, y=0.5, z=1.0, wait=True, cartesian=True)
             self.commander.reset_state()
-            self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=False)
+            self.commander.move_to_position(x=1.6, y=0.0, z=1.0, wait=True, cartesian=True)
             self.commander.reset_state()
 
             # Attempt to move by a displacement of current ee pose
