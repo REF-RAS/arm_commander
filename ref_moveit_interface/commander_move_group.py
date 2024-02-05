@@ -13,17 +13,21 @@ __status__ = 'Development'
 # --- General Imports
 import sys, copy, threading, time, signal, math, rclpy, traceback
 import timeit, tf2_ros, tf_transformations
-
+# ROS Python Imports
 from rclpy.logging import get_logger
-from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
+from rclpy.qos import (
+    QoSDurabilityPolicy, 
+    QoSHistoryPolicy, 
+    QoSProfile, 
+    QoSReliabilityPolicy
+)
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 # --- Import ROS Messages
+# Moveit! Messages
 from moveit_msgs.msg import (
-    RobotTrajectory, 
     PlanningScene, 
-    ObjectColor,
     CollisionObject,
     AttachedCollisionObject,
     Constraints,
@@ -32,20 +36,32 @@ from moveit_msgs.msg import (
     PositionConstraint,
     MoveItErrorCodes,
 )
-
-from moveit_msgs.action import MoveGroup
-from moveit_msgs.srv import GetCartesianPath, GetMotionPlan, GetPlanningScene
-
+# Moveit! Actions
+from moveit_msgs.action import (
+    MoveGroup, 
+    ExecuteTrajectory
+)
+# Moveit! Services
+from moveit_msgs.srv import (
+    GetCartesianPath, 
+    GetMotionPlan, 
+    GetPlanningScene, 
+    ApplyPlanningScene
+)
+# Standard Messages and Actions
 from std_msgs.msg import Float64
 from action_msgs.msg import GoalStatus
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, Transform, TransformStamped
 from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
 from trajectory_msgs.msg import JointTrajectory
 from control_msgs.action import FollowJointTrajectory
 
 # Import State Definitions
-from ref_moveit_interface.states import CommanderStates, ConstraintOptions
+from ref_moveit_interface.states import (
+    CommanderStates, 
+    ConstraintOptions
+)
 
 class ArmCommander():
     def __init__(self, 
@@ -53,45 +69,64 @@ class ArmCommander():
                 moveit_group_name: str = None, 
                 world_link: str = None) -> None:
         
-        # --- Define the logging interface to use
+        # --- Initialize ArmCommander variables
+        # Define the logging interface to use
         self._logger = get_logger("arm_commander")   
         self._nh = nh     
         
-        # --- Create lock for synchronization
+        # Create lock for synchronization
         self._action_lock = threading.Lock()
         self._future = threading.Event()
         self._cb_execute_goal_handle = None
 
-        # --- Define constants (should import from config)
+        # Define constants (should import from config)
         self.CARTE_PLANNING_STEP_SIZE = 0.0001  # meters
-        self.GROUP_NAME = moveit_group_name
-
-        # --- initialize Moveit! variables 
-        # Equivalent moveit_commander.RobotCommander()
-        # A moveit_py bind to moveit_cpp
-        # self.robot = MoveItPy(node_name="arm_commander")
-        # Equivalent moveit_commander.PlanningSceneInterface
-        # self.scene = self.robot.get_planning_scene_monitor()
-        # Equivalent moveit_commander.MoveGroupCommander
-        # self.move_group = self.robot.get_planning_component(moveit_group_name)       
-        # initialize the world_link as the default planning frame
+        self._move_group_name = moveit_group_name
+ 
+        # Initialize the ee and world_link
         self._end_effector_link = "tool0"
-        # self.set_ee_link() 
-        self.WORLD_REFERENCE_LINK = world_link
+        self._world_reference_link = world_link
         self._move_group = True
         self._wait_for_busy_end_rate = self._nh.create_rate(100) #hz
-        # if world_link is not None:
-        #     self.WORLD_REFERENCE_LINK = world_link
-        #     with self.scene.read_write() as scene:
-        #         self.logger.info(f'[ArmCommander::init][default reference frame changed from {scene.planning_frame} to {world_link}')
-        #         self.logger.warn(f"[ArmCommander::init][Setting Not Available]")
-        # else:
-        #     with self.scene.read_only() as scene:
-        #         self.WORLD_REFERENCE_LINK = scene.planning_frame
-        #     self.logger.info(f'[ArmCommander::init][default reference frame is {self.WORLD_REFERENCE_LINK}]')
 
-         # Create callback group that allows execution of callbacks in parallel without restrictions
+        # Internal States
+        self._commander_state: CommanderStates = CommanderStates.READY
+        self._cached_result = None
+
+        # Define workspace walls
+        self._wall_name_list = []
+
+        # Transform Publishers
+        # NOTE: requires node handle passed into class
+        self._tf_buffer = tf2_ros.Buffer()
+        self._tf_pub = tf2_ros.TransformBroadcaster(node=self._nh)
+        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, node=self._nh)
+
+        # Constraints
+        # NOTE: used within the default move group goal (see below)
+        self._the_constraints = Constraints()
+        self._the_constraints.name = 'commander'
+        # Defining the Default Move Goal to Populate
+        self._move_action_goal = self._move_default_goal(
+            frame_id = self._world_reference_link,
+            group_name = self._move_group_name,
+            end_effector = self._end_effector_link
+        )
+
+        # Set an internal timeout
+        # NOTE: This works as intended but commented out for now (awaiting more work)
+        self._timer = self._nh.create_timer(0.05, self._cb_timer)
+
+        # Named Pose Handling
+        self._named_poses: dict = None
+
+        # Create callback group that allows execution of callbacks in parallel without restrictions
         self._callback_group = ReentrantCallbackGroup()
+
+        # Joint State Variables
+        self._joint_state = None
+        self._joint_state_mutex = threading.Lock()
+        self._joint_state_ready = False
 
         # --- ROS QoS Profiles
         self._qos_volatile_besteffort_last_depth1 = QoSProfile(
@@ -108,10 +143,6 @@ class ArmCommander():
         )
 
         # --- ROS Subscribers
-        # Joint State Subscription
-        self._joint_state = None
-        self._joint_state_mutex = threading.Lock()
-        self._joint_state_ready = False
         self._nh.create_subscription(
             msg_type=JointState,
             topic="joint_states",
@@ -119,6 +150,13 @@ class ArmCommander():
             qos_profile=self._qos_volatile_besteffort_last_depth1,
             callback_group=self._callback_group,
         )
+        # self._nh.create_subscription(
+        #     msg_type=ExecuteTrajectory.Result,
+        #     topic="execute_trajectory/result",
+        #     callback=self._cb_trajectory_execute_result,
+        #     qos_profile=self._qos_volatile_besteffort_last_depth1,
+        #     callback_group=self._callback_group
+        # )
             
         # --- ROS Publishers
         self._collision_object_pub = self._nh.create_publisher(
@@ -126,19 +164,18 @@ class ArmCommander():
             "/collision_object",
             10
         )
-
         self._attached_collision_object_pub = self._nh.create_publisher(
             AttachedCollisionObject,
             "/attached_collision_object",
             10
         )
+        self._planning_scene_pub = self._nh.create_publisher(
+            PlanningScene,
+            "/planning_scene",
+            10
+        )
 
         # --- ROS Actions
-        self._move_action_goal = self._move_default_goal(
-            frame_id = self.WORLD_REFERENCE_LINK,
-            group_name = self.GROUP_NAME,
-            end_effector = self._end_effector_link
-        )
         self._move_action_client = ActionClient(
             node=self._nh,
             action_type=MoveGroup,
@@ -164,33 +201,48 @@ class ArmCommander():
             srv_name="plan_kinematic_path",
             callback_group=self._callback_group
         )
+        self._get_planning_scene_srv = self._nh.create_client(
+            srv_type=GetPlanningScene,
+            srv_name="get_planning_scene",
+            callback_group=self._callback_group
+        )
+        self._get_planning_scene_future = None
+        self._set_planning_scene_srv = self._nh.create_client(
+            srv_type=ApplyPlanningScene,
+            srv_name="apply_planning_scene",
+            callback_group=self._callback_group
+        )
 
-        # --- Internal States
-        self._commander_state: CommanderStates = CommanderStates.READY
-        # NOTE: may not be needed due to direct API calls
-        self._cached_result = None
-        # NOTE: new variable to capture execution status
-        # self.execution_status: ExecutionStatus = None
+    # --- Moveit Commander (Missing) Methods
+    def _get_known_object_poses(self, with_type: bool = False) -> dict:
+        """Gets known objects from the planning scene service
 
-        # --- Define workspace walls
-        self._wall_name_list = []
+        :param with_type: Retrieve type if True, defaults to False
+        :type with_type: bool, optional
+        :return: Dictionary of string names and their poses
+        :rtype: dict
+        """
+        result = dict()
+        req = GetPlanningScene.Request()
+        req.components.components = req.components.WORLD_OBJECT_NAMES
 
-        # --- Transform Publishers
-        # NOTE: requires node handle passed into class
-        self._tf_buffer = tf2_ros.Buffer()
-        self._tf_pub = tf2_ros.TransformBroadcaster(node=self._nh)
-        self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, node=self._nh)
+        # --- Check if service is available and send path request  
+        if self._get_planning_scene_future and self._get_planning_scene_future.done():
+            resp = self._get_planning_scene_future.result()
 
-        # --- Constraints
-        # NOTE: may have an alternative implementation 
-        self._the_constraints = None
+            for object in resp.scene.world.collision_objects:
+                result[object.id] = object.pose 
 
-        # --- Set an internal timeout
-        # NOTE: may have an alternative implementation
-        self._timer = None
+            self._get_planning_scene_future = None
+            # self._logger.info(
+            #     f"[ArmCommander::_get_known_object_poses][Received: {result}]"
+            # )
 
-        # --- Named Pose Handling
-        self._named_poses: dict = None
+            return result
+        else:
+            # Make a request
+            self._get_planning_scene_future = self._get_planning_scene_srv.call_async(req)
+            return dict()
     
     # --- Internal Methods
     def _move_default_goal(
@@ -221,7 +273,7 @@ class ArmCommander():
         move_goal.request.workspace_parameters.max_corner.z = 1.0
 
         # --- Create empty constraints list for population
-        move_goal.request.goal_constraints = [Constraints()]
+        move_goal.request.goal_constraints = [self._the_constraints]
 
         # --- Property setup
         # TODO: read from config
@@ -250,11 +302,8 @@ class ArmCommander():
         self._joint_state = msg
         self._joint_state_mutex.release()        
 
-    def _cb_timer(self, event) -> None:
-        """TODO: implement timer for waking up IDLE commander
-
-        :param event: _description_
-        :type event: _type_
+    def _cb_timer(self) -> None:
+        """Timer for waking up IDLE commander
         """
         self._pub_workspace_color()
         self._pub_transform_all_objects()
@@ -262,22 +311,56 @@ class ArmCommander():
     def _pub_workspace_color(self) -> None:
         """TODO: publish colours of workspace (wall) objects
         """
-        self._logger.warn(f"[ArmCommander::_pub_workspace_color][Not Yet Implemented]")
+        # self._logger.warn(f"[ArmCommander::_pub_workspace_color][Not Yet Implemented]")
+        planning_scene = PlanningScene()
+        planning_scene.is_diff = True
+        for wall in self._wall_name_list:
+            color = self._set_object_color(wall, 0.6, 0, 1, 0.2)
+            planning_scene.object_colors.append(color)
+        self._planning_scene_pub.publish(planning_scene)
 
     def _pub_transform_all_objects(self) -> None:
         """TODO: publish transforms of all objects in scene
         """
-        self._logger.warn(f"[ArmCommander::_pub_transform_all_objects][Not Yet Implemented]")
+        # self._logger.warn(f"[ArmCommander::_pub_transform_all_objects][Not Yet Implemented]")
+        object_pose_dict = self._get_known_object_poses()
+        for name, pose in object_pose_dict.items():
+            self._pub_transform_object(name=name, pose=pose)
 
     def _pub_transform_object(self, name, pose) -> None:
-        """TODO: publish transform of a specific named object
+        """Publish transform of a specific named object
 
         :param name: _description_
         :type name: _type_
         :param pose: _description_
         :type pose: _type_
         """
-        self._logger.warn(f"[ArmCommander::_pub_transform_object][Not Yet Implemented]")
+        tf = Transform()
+        if type(pose) == Pose:
+            tf.translation.x = pose.position.x
+            tf.translation.y = pose.position.y
+            tf.translation.z = pose.position.z
+            tf.rotation.x = pose.orientation.x
+            tf.rotation.y = pose.orientation.y
+            tf.rotation.z = pose.orientation.z
+            tf.rotation.w = pose.orientation.w
+        elif type(pose) == PoseStamped:
+            tf.translation.x = pose.pose.position.x
+            tf.translation.y = pose.pose.position.y
+            tf.translation.z = pose.pose.position.z
+            tf.rotation.x = pose.pose.orientation.x
+            tf.rotation.y = pose.pose.orientation.y
+            tf.rotation.z = pose.pose.orientation.z
+            tf.rotation.w = pose.pose.orientation.w
+        else:
+            raise ValueError(f"Parameter pose should be a Pose or PoseStamped object")
+        
+        tf_stamped = TransformStamped()
+        tf_stamped.child_frame_id = name
+        tf_stamped.header.frame_id = self._world_reference_link
+        tf_stamped.header.stamp = self._nh.get_clock().now().to_msg()
+        tf_stamped.transform = tf
+        self._tf_pub.sendTransform(transform=tf_stamped)
 
     def _cb_move_group_result(self) -> None:
         """TODO: alternative direct API version of this
@@ -647,7 +730,7 @@ class ArmCommander():
         cart_req.group_name = self._move_action_goal.request.group_name
         cart_req.link_name = self._end_effector_link
         cart_req.max_step = self.CARTE_PLANNING_STEP_SIZE
-        cart_req.header.frame_id = self.WORLD_REFERENCE_LINK
+        cart_req.header.frame_id = self._world_reference_link
         cart_req.header.stamp = self._nh.get_clock().now().to_msg()
         cart_req.path_constraints = self._move_action_goal.request.path_constraints
         cart_req.waypoints = [target_pose.pose]
@@ -763,7 +846,7 @@ class ArmCommander():
             return None
         
         # --- Common settings
-        con.header.frame_id = self.WORLD_REFERENCE_LINK
+        con.header.frame_id = self._world_reference_link
         con.link_name = self._end_effector_link
 
         if type == ConstraintOptions.POSITION:
@@ -828,7 +911,8 @@ class ArmCommander():
             self._plan_and_execute_move_group(plan_only=False) 
 
             # --- Clearing constraints for next cycle
-            self._move_action_goal.request.goal_constraints = [Constraints()]            
+            self._the_constraints = Constraints()
+            # self._move_action_goal.request.goal_constraints = [Constraints()]            
         finally:
             self._action_lock.release()
     
@@ -862,7 +946,7 @@ class ArmCommander():
             # --- Get the current pose of the end-effector link
             ee_pose: PoseStamped = self.pose_in_frame(
                 link_name=self._end_effector_link, 
-                reference_frame=self.WORLD_REFERENCE_LINK
+                reference_frame=self._world_reference_link
             )
 
             # --- Copy and update current ee pose with displacement
@@ -905,7 +989,8 @@ class ArmCommander():
             self._execute(trajectory=plan, wait=wait) 
 
             # --- Clearing constraints for next cycle
-            self._move_action_goal.request.goal_constraints = [Constraints()]
+            self._the_constraints = Constraints()
+            # self._move_action_goal.request.goal_constraints = [Constraints()]
 
         except Exception as e:
             self._logger.error(
@@ -948,7 +1033,7 @@ class ArmCommander():
         self._action_lock.acquire()
         try:
             # --- Configure target pose from inputs
-            reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
+            reference_frame = reference_frame if reference_frame is not None else self._world_reference_link
             target_pose: PoseStamped = self.pose_in_frame(self._end_effector_link, reference_frame)
             target_pose.pose.position.x = x if x is not None else target_pose.pose.position.x
             target_pose.pose.position.y = y if y is not None else target_pose.pose.position.y
@@ -992,7 +1077,9 @@ class ArmCommander():
                 self._plan_and_execute_move_group(plan_only=False) 
 
             # --- Clearing constraints for next cycle
-            self._move_action_goal.request.goal_constraints = [Constraints()]
+            self._the_constraints = Constraints()
+            # self._move_action_goal.request.goal_constraints = [Constraints()]
+
         except Exception as e:
             self._logger.error(
                 f"[ArmCommander::move_to_position][System Error <{e} {traceback.format_exc()}>]"
@@ -1030,7 +1117,11 @@ class ArmCommander():
         if print: self._logger.info(joint_values)
         return joint_values   
 
-    def pose_in_frame_as_xyzq(self, link_name:str=None, reference_frame:str=None, ros_time:rclpy.time.Time=None, print=False) -> list:
+    def pose_in_frame_as_xyzq(self, 
+                        link_name: str = None, 
+                        reference_frame: str = None, 
+                        ros_time: rclpy.time.Time = None, 
+                        print: bool = False) -> list:
         """ Get the pose of a link as a list of 7 floats (xyzq)
 
         :param link_name: The name of the link to be queried, defaults to the end-effector
@@ -1047,7 +1138,7 @@ class ArmCommander():
         """
         link_name = self._end_effector_link if link_name is None else link_name
         ros_time = rclpy.time.Time() if ros_time is None else ros_time
-        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame    
+        reference_frame = self._world_reference_link if reference_frame is None else reference_frame    
         try:
             trans = self._tf_buffer.lookup_transform(
                 target_frame=reference_frame,
@@ -1077,7 +1168,11 @@ class ArmCommander():
         
         return trans_list
     
-    def pose_in_frame_as_xyzrpy(self, link_name:str=None, reference_frame:str=None, ros_time:rclpy.time.Time=None, print=False) -> list:
+    def pose_in_frame_as_xyzrpy(self, 
+                        link_name: str = None, 
+                        reference_frame: str = None, 
+                        ros_time: rclpy.time.Time = None, 
+                        print: bool = False) -> list:
         """ Get the pose of a link as a list of 6 floats (xyzrpy)
 
         :param link_name: The name of the link to be queried, defaults to the end-effector
@@ -1095,7 +1190,7 @@ class ArmCommander():
         # Initial setup
         link_name = self._end_effector_link if link_name is None else link_name
         ros_time = rclpy.time.Time() if ros_time is None else ros_time
-        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame 
+        reference_frame = self._world_reference_link if reference_frame is None else reference_frame 
 
         # Request 7 float list of pose
         pose = self.pose_in_frame_as_xyzq(link_name, reference_frame, ros_time)
@@ -1107,7 +1202,10 @@ class ArmCommander():
             self._logger.info(f'[ArmCommander::pose_in_frame_as_xyzrpy][pose of {link_name} from {reference_frame}: {xyzrpy}]')
         return xyzrpy
     
-    def pose_in_frame(self, link_name:str=None, reference_frame:str=None, ros_time:rclpy.time.Time=None) -> PoseStamped:
+    def pose_in_frame(self, 
+                link_name: str = None, 
+                reference_frame: str = None, 
+                ros_time: rclpy.time.Time = None) -> PoseStamped:
         """ Get the pose of a link as a PoseStamped
 
         :param link_name: The name of the link to be queried, defaults to the end-effector
@@ -1121,7 +1219,7 @@ class ArmCommander():
         :rtype: PoseStamped
         """
         # Initial setup
-        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame        
+        reference_frame = self._world_reference_link if reference_frame is None else reference_frame        
         link_name = self._end_effector_link if link_name is None else link_name
         ros_time = rclpy.time.Time() if ros_time is None else ros_time
 
@@ -1163,7 +1261,7 @@ class ArmCommander():
         
         # Convert to a posestamped message
         pose_stamped = PoseStamped()
-        pose_stamped.header.frame_id = self.WORLD_REFERENCE_LINK
+        pose_stamped.header.frame_id = self._world_reference_link
         pose_stamped.header.stamp = self._nh.get_clock().now().to_msg()
         pose_stamped.pose = pose
         return pose_stamped
@@ -1308,9 +1406,9 @@ class ArmCommander():
         """
         nyi = "Not Yet Implemented"
         string_list = [
-        f'> group name: {self.GROUP_NAME}',
+        f'> group name: {self._move_group_name}',
         f'> planning time: {nyi}',
-        f'> pose reference frame: {self.WORLD_REFERENCE_LINK}',   
+        f'> pose reference frame: {self._world_reference_link}',   
         f'> end-effector:\t\nlinks: {self._end_effector_link}',
         f'> pose: {self.pose_of_robot_link().pose}',
         f'> roll, pitch, yaw: {nyi}',
