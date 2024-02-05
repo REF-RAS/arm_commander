@@ -224,7 +224,7 @@ class ArmCommander():
         """
         result = dict()
         req = GetPlanningScene.Request()
-        req.components.components = req.components.WORLD_OBJECT_NAMES
+        req.components.components = req.components.WORLD_OBJECT_GEOMETRY
 
         # --- Check if service is available and send path request  
         if self._get_planning_scene_future and self._get_planning_scene_future.done():
@@ -234,9 +234,9 @@ class ArmCommander():
                 result[object.id] = object.pose 
 
             self._get_planning_scene_future = None
-            # self._logger.info(
-            #     f"[ArmCommander::_get_known_object_poses][Received: {result}]"
-            # )
+            self._logger.info(
+                f"[ArmCommander::_get_known_object_poses][Received: {result}]"
+            )
 
             return result
         else:
