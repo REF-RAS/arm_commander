@@ -27,7 +27,7 @@ def generate_launch_description():
     moveit_py_node = Node(
         name="test",
         package="arm_commander",
-        executable="entry_point",
+        executable="commander_demo.py",
         output="both",
         parameters=[moveit_config.to_dict()],
     )

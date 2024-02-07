@@ -58,7 +58,7 @@ from trajectory_msgs.msg import JointTrajectory
 from control_msgs.action import FollowJointTrajectory
 
 # Import State Definitions
-from arm_commander.states import (
+from arm_commander_py.states import (
     CommanderStates, 
     ConstraintOptions
 )

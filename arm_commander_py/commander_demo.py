@@ -16,7 +16,7 @@ import time
 
 # project modules
 # from ref_moveit_interface.commander_moveitpy import ArmCommander
-from arm_commander.commander_move_group import ArmCommander
+from arm_commander_py.commander_move_group import ArmCommander
 # from moveit.planning import MoveItPy
 from rclpy.logging import get_logger
 
