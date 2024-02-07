@@ -18,6 +18,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_ros_move_group REQUIRED)
+find_package(moveit_msgs REQUIRED)
 
 # --- Handle Cpp Setup
 # Include Cpp "include" directory
@@ -25,7 +26,13 @@ include_directories(arm_commander_cpp/include)
 
 # Create Cpp executable
 add_executable(cpp_executable arm_commander_cpp/commander_demo.cpp arm_commander_cpp/src/commander.cpp)
-ament_target_dependencies(cpp_executable rclcpp)
+ament_target_dependencies(
+  cpp_executable 
+  rclcpp 
+  moveit_ros_move_group 
+  moveit_ros_planning_interface
+  moveit_msgs
+)
 
 # Install Cpp executables
 install(TARGETS

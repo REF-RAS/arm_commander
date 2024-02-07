@@ -1,15 +1,18 @@
 #include "commander.h"
 
 // --------------- PUBLIC METHODS -------------------------
-Commander::Commander(std::string group_name, std::string world_link)
+Commander::Commander(std::string planning_group, std::string world_link, rclcpp::Node::SharedPtr node) : 
+                                    _robot_model_loader(node, "robot_description"),
+                                    _move_group_interface(node, planning_group)
+
 {
-    this->_logger("Constructing!", LOG_LEVEL::INFO);
-
-    _group_name = group_name;
+    // Initialise variables
+    _node = node;
+    _planning_group = planning_group;
     _world_link = world_link;
-
+    this->_logger("Constructed", LOG_LEVEL::INFO);
     std::ostringstream oss;
-    oss << "Group Name: " << _group_name << " | World Link: " << _world_link;
+    oss << "Planning group: " << _planning_group << " | World Link: " << _world_link;
     this->_logger(oss.str(), LOG_LEVEL::INFO);
 }
 

@@ -1,52 +1,19 @@
 #include "commander.h"
 
-class CommanderDemo : public rclcpp::Node
+class Demo : public rclcpp::Node
 {
     public:
-        /// @brief Constructor
-        CommanderDemo(): Node("commander_demo")
+        Demo() : rclcpp::Node("commander_demo")
         {
-            // Do Nothing           
-            logger("CONSTRUCTING DEMO", LOG_LEVEL::INFO); 
-
-            // On construction run demo
-            runDemo();
+            // --- Create the arm commander
+            // Pass in node handle as shared object
+            Commander arm_commander("manipulator", "base_link", std::make_shared<rclcpp::Node>(this->get_name()));
         }
 
-        /// @brief Main demonstration method
-        /// @param void
         void runDemo(void)
         {
-            logger("RUNNING DEMO", LOG_LEVEL::INFO); 
-
-            // Create a dynamic commader object
-            Commander* arm_commander = new Commander("manipulator", "base_link");
             
-            
-
         }
-
-        /// @brief Class-level public logging method for ease of use in ROS
-        /// @param txt 
-        /// @param level 
-        void logger(std::string txt, LOG_LEVEL level = LOG_LEVEL::INFO)
-        {
-            switch (level)
-            {
-            case LOG_LEVEL::INFO:
-                RCLCPP_INFO(rclcpp::get_logger(this->_name), txt.c_str());
-                break;
-            case LOG_LEVEL::ERROR:
-                RCLCPP_ERROR(rclcpp::get_logger(this->_name), txt.c_str());
-                break;
-            default:
-                break;
-            }
-        }
-
-    private:
-        /// @brief Basic Node Name
-        const std::string _name = "commander_demo";
 };
 
 /// @brief Main Function
@@ -57,7 +24,27 @@ int main(int argc, char * argv[])
 {
     // Initialise and create the node
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<CommanderDemo>());
+
+    auto demo = std::make_shared<Demo>();
+
+    rclcpp::spin(demo);
     rclcpp::shutdown();
     return 0;
+
+    // rclcpp::NodeOptions node_options;
+    // node_options.automatically_declare_parameters_from_overrides(true);
+    // auto node = rclcpp::Node::make_shared("commander_demo", node_options);
+
+    // We spin up a SingleThreadedExecutor for the current state monitor to get information
+    // // about the robot's state.
+    // rclcpp::executors::SingleThreadedExecutor executor;
+    // executor.add_node(move_group_node);
+    // std::thread([&executor]() { executor.spin(); }).detach();
+
+    // // Start Test
+    // Commander arm_commander("manipulator", "base_link", node);
+
+    // --- Reached End
+    // rclcpp::shutdown();
+    // return 0;
 }
