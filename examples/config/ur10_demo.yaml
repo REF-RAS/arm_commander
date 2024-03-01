@@ -1,0 +1,14 @@
+robot: ur10
+moveit_group_name: manipulator
+scene:
+  workspace: [-1.0, -0.8, -0.2, 1.5, 0.8, 1.5]  # min_x, min_y, min_z, max_x, max_y, max_z
+  named_poses: 
+    stow: [3.110, -0.5467, -2.692, -1.473, 1.570, 0.000]  # from base to wrist_3
+    home: [2.524, -1.241, -2.101, -1.370, 1.570, 0.000]  # from base to wrist_3
+  the_box: 
+    dimensions: [0.5, 0.2, 0.3]
+    position: [0, -0.6, 0.15]
+    orientation: [0, 0, 0]
+  the_sphere:
+    dimensions: 0.05
+    position: [0.3, -0.3, 0.50]

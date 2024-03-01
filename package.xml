@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!-- Created with QCR's code template tool: https://github.com/qcr/code_templates -->
+
+<package format="2">
+  <name>arm_commander</name>
+  <version>0.1.0</version>
+  <description>The moveit arm commander package</description>
+
+  <maintainer email="robotics.ref@qut.edu.au">Andrew Lui and Dasun Gunasinghe</maintainer>
+
+  <license>BSD</license>
+
+  <build_depend>rospy</build_depend>
+  <buildtool_depend>catkin</buildtool_depend>
+
+</package>

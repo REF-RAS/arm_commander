@@ -1,0 +1,14 @@
+robot: panda
+moveit_group_name: panda_arm
+scene:
+  workspace: [-0.5, -0.75, -0.1, 1.0, 0.75, 1.0]  # min_x, min_y, min_z, max_x, max_y, max_z
+  named_poses: 
+    stow: [0.0, -1.244, 0.0, -2.949, 0.0, 1.704, 0.785] # from base
+    home: [0.0, -0.785, 0.0, -2.36, 0.0, 1.57, 0.785] # from base
+  the_box: 
+    dimensions: [0.5, 0.2, 0.3]
+    position: [0, -0.3, 0.15]
+    orientation: [0, 0, 0]
+  the_sphere:
+    dimensions: 0.05
+    position: [0.3, 0.15, 0.50]
