@@ -886,29 +886,29 @@ class GeneralCommander():
             rospy.sleep(0.2)
         rospy.logwarn(f'{__class__.__name__} (_wait_for_scene_update): timeout ({timeout} seconds)')
 
-    # add an object (defined with a meshed model, pose, scale) to the scene
-    def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list):
-        """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
+    # # add an object (defined with a meshed model, pose, scale) to the scene
+    # def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list):
+    #     """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
 
-        :param object_name: The name given to the new scene object
-        :type object_name: str
-        :param model_file: The path to the file that defines the mesh of the object
-        :type model_file: str
-        :param object_scale: The list of scale in 3 dimension
-        :type object_scale: list
-        :param xyz: The position of the object in the world/default reference frame
-        :type xyz: list
-        :param rpy: The orientation of the object in euler angles in the world/default reference frame
-        :type rpy: list
-        """
-        self.scene.remove_world_object(object_name)
-        object_pose = conversions.list_to_pose_stamped(xyz + rpy, self.WORLD_REFERENCE_LINK)
-        self.scene.add_mesh(
-                object_name, object_pose,
-                model_file, object_scale
-        )
-        self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
-        self._pub_transform_object(object_name, object_pose)
+    #     :param object_name: The name given to the new scene object
+    #     :type object_name: str
+    #     :param model_file: The path to the file that defines the mesh of the object
+    #     :type model_file: str
+    #     :param object_scale: The list of scale in 3 dimension
+    #     :type object_scale: list
+    #     :param xyz: The position of the object in the world/default reference frame
+    #     :type xyz: list
+    #     :param rpy: The orientation of the object in euler angles in the world/default reference frame
+    #     :type rpy: list
+    #     """
+    #     self.scene.remove_world_object(object_name)
+    #     object_pose = conversions.list_to_pose_stamped(xyz + rpy, self.WORLD_REFERENCE_LINK)
+    #     self.scene.add_mesh(
+    #             object_name, object_pose,
+    #             model_file, object_scale
+    #     )
+    #     self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
+    #     self._pub_transform_object(object_name, object_pose)
     
     # add an object (defined with a meshed model, pose, scale) to the scene
     def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list, reference_frame:str=None):
