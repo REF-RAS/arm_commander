@@ -21,8 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="The Arm Commander" href="arm_commander_tutorial_part1.html" />
-    <link rel="prev" title="The Arm Commander" href="arm_commander.html" /> 
+    <link rel="prev" title="The Arm Commander" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,8 +45,6 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander.html">The Arm Commander</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">The Arm Commander: API Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-arm_commander.commander_moveit">arm_commander.commander_moveit module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#arm_commander.commander_moveit.GeneralCommander"><code class="docutils literal notranslate"><span class="pre">GeneralCommander</span></code></a><ul>
@@ -147,8 +144,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-arm_commander">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part1.html">The Arm Commander</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part2.html">The Arm Commander</a></li>
 </ul>
 
         </div>
@@ -199,17 +194,18 @@ to Moveit</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="arm_commander.commander_moveit.GeneralCommander.add_box_to_scene">
 <span class="sig-name descname"><span class="pre">add_box_to_scene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">object_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dimensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rpy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0,</span> <span class="pre">0,</span> <span class="pre">0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.add_box_to_scene" title="Permalink to this definition"></a></dt>
-<dd><p>Add a box to the scene for collision avoidance in path planning
-:param object_name: The name given to the new scene object
-:type object_name: str
-:param dimensions: The dimensions of the box as a list of 3 floats
-:type radius: list
-:param xyz: The position of the box in the world/default reference frame
-:type xyz: list
-:param rpy: The orientation of the box in the world/default reference frame
-:type rpy: list
-:param reference_frame: The frame of reference of the xyz and rpy
-:type reference_frame: str, default to WORLD_REFERENCE_LINK</p>
+<dd><p>Add a box to the scene for collision avoidance in path planning</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>object_name</strong> (<em>str</em>) – The name given to the new scene object</p></li>
+<li><p><strong>dimensions</strong> – The dimensions of the box as a list of 3 floats</p></li>
+<li><p><strong>xyz</strong> (<em>list</em>) – The position of the box in the world/default reference frame</p></li>
+<li><p><strong>rpy</strong> (<em>list</em>) – The orientation of the box in the world/default reference frame</p></li>
+<li><p><strong>reference_frame</strong> (<em>str</em><em>, </em><em>default to WORLD_REFERENCE_LINK</em>) – The frame of reference of the xyz and rpy</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -247,7 +243,7 @@ to Moveit</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="arm_commander.commander_moveit.GeneralCommander.add_path_constraints">
 <span class="sig-name descname"><span class="pre">add_path_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraint</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.add_path_constraints" title="Permalink to this definition"></a></dt>
-<dd><p>Add a constraint to the commander. Refer to :class:’moveit_tool’ for functions to conveniently create
+<dd><p>Add a constraint to the commander. Refer to :module:’arm_commander.moveit_tools’ for functions to conveniently create
 a constraint object</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -584,9 +580,9 @@ the commander through :method: ‘add_named_pose’.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="arm_commander.commander_moveit.GeneralCommander.move_to_pose">
-<span class="sig-name descname"><span class="pre">move_to_pose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_pose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.move_to_pose" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">move_to_pose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_pose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Pose</span></span></span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.move_to_pose" title="Permalink to this definition"></a></dt>
 <dd><dl class="simple">
-<dt>command the robot arm to move the end effector to a pose optionally in a particular frame of reference   </dt><dd><p>the target_pose may be a list of 6 numbers (xyz+rpy), 7 numbers (xyz+4q), Pose or PoseStamped</p>
+<dt>Command the robot arm to move the end effector to a pose optionally in a particular frame of reference   </dt><dd><p>the target_pose may be a list of 6 numbers (xyz+rpy), 7 numbers (xyz+4q), Pose or PoseStamped</p>
 </dd>
 </dl>
 <dl class="field-list simple">
@@ -608,25 +604,28 @@ the commander through :method: ‘add_named_pose’.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="arm_commander.commander_moveit.GeneralCommander.move_to_position">
-<span class="sig-name descname"><span class="pre">move_to_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accept_fraction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.9999</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cartesian</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.move_to_position" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">move_to_position</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accept_fraction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.9999</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cartesian</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Pose</span></span></span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.move_to_position" title="Permalink to this definition"></a></dt>
 <dd><p>Command the robot arm to move the end effector to a position (x, y, z) optionally 
 in a cartesian motion manner and optionally in a specified frame of reference</p>
-<p>:param x:The target x position, defaults to the current x position
-:type x: float, optional
-:param y: The target y position, defaults to the current y position
-:type y: float, optional
-:param z: The target z position, defaults to the current z position
-:type z: float, optional
-:param accept_fraction: the acceptable minimum fraction of the planned path towards the target or abort the command, defaults to 0.9999
-:type accept_fraction: float, optional
-:param cartesian: Use cartesian motion as the path, defaults to False
-:type cartesian: bool, optional
-:param reference_frame: The frame of reference in which positions are specified, defaults to the world/default
-:type reference_frame: str, optional
-:param wait: The call is blocked until the command has been completed, defaults to True
-:type wait: bool, optional
-:return: The target pose in the given reference frame
-:rtype: Pose</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>float</em><em>, </em><em>optional</em>) – the target x position, defaults to the current x position</p></li>
+<li><p><strong>y</strong> (<em>float</em><em>, </em><em>optional</em>) – the target y position, defaults to the current y position</p></li>
+<li><p><strong>z</strong> (<em>float</em><em>, </em><em>optional</em>) – the target z position, defaults to the current z position</p></li>
+<li><p><strong>accept_fraction</strong> (<em>float</em><em>, </em><em>optional</em>) – the acceptable minimum fraction of the planned path towards the target or abort the command, defaults to 0.9999</p></li>
+<li><p><strong>cartesian</strong> (<em>bool</em><em>, </em><em>optional</em>) – use cartesian motion as the path, defaults to False</p></li>
+<li><p><strong>reference_frame</strong> (<em>str</em><em>, </em><em>optional</em>) – frame of reference in which positions are specified, defaults to the world/default</p></li>
+<li><p><strong>wait</strong> (<em>bool</em><em>, </em><em>optional</em>) – the call is blocked until the command has been completed, defaults to True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The target pose in the given reference frame</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pose</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -749,10 +748,7 @@ in a cartesian motion manner and optionally in a specified frame of reference</p
 <dl class="py method">
 <dt class="sig sig-object py" id="arm_commander.commander_moveit.GeneralCommander.rotate_to_orientation">
 <span class="sig-name descname"><span class="pre">rotate_to_orientation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">roll</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pitch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yaw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.rotate_to_orientation" title="Permalink to this definition"></a></dt>
-<dd><dl class="simple">
-<dt>Command the robot arm to rotate the end effector to an orientation (rpy) optionally in a </dt><dd><p>particular frame of reference</p>
-</dd>
-</dl>
+<dd><p>Command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -866,15 +862,12 @@ in a cartesian motion manner and optionally in a specified frame of reference</p
 
 <dl class="py method">
 <dt class="sig sig-object py" id="arm_commander.commander_moveit.GeneralCommander.spin">
-<span class="sig-name descname"><span class="pre">spin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spin_in_thread</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.spin" title="Permalink to this definition"></a></dt>
-<dd><dl class="simple">
-<dt>A function to put this commander running in a loop for asynchronous operation and autonomous management of the underlying</dt><dd><p>arm manipulation platform. It supports running the loop in a new thread created in the function call, or in the existing thread that
-makes this call. For the latter case, the existing thread will block and never returns.</p>
-</dd>
-</dl>
+<span class="sig-name descname"><span class="pre">spin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spin_in_thread</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#arm_commander.commander_moveit.GeneralCommander.spin" title="Permalink to this definition"></a></dt>
+<dd><p>Starts the arm commander. If the parameter is True, the arm_commander is running in a new thread, 
+If otherwise, the commander is running in the caller’s thread, blocking the call.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>spin_in_thread</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>defaults to True</em>) – the loop  defaults to True</p>
+<dd class="field-odd"><p><strong>spin_in_thread</strong> (<em>bool</em><em>, </em><em>optional</em>) – create a new thread for the loop, defaults to True</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1080,12 +1073,12 @@ a manipulation group defined in the setup assistant (or the custom.env file)</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="arm_commander.moveit_tools.create_pose_stamped">
 <span class="sig-prename descclassname"><span class="pre">arm_commander.moveit_tools.</span></span><span class="sig-name descname"><span class="pre">create_pose_stamped</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xyzrpy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PoseStamped</span></span></span><a class="headerlink" href="#arm_commander.moveit_tools.create_pose_stamped" title="Permalink to this definition"></a></dt>
-<dd><p>Convert a pose in the form of xyzrpy (list) to a Pose object</p>
+<dd><p>Convert a pose in the form of xyzrpy (list) to a PoseStamped object</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>xyzrpy</strong> (<em>str</em>) – a list of 6 numbers</p></li>
-<li><p><strong>xyzrpy</strong> – the reference frame of this pose</p></li>
+<li><p><strong>xyzrpy</strong> (<em>list</em>) – a list of 6 numbers</p></li>
+<li><p><strong>reference_frame</strong> (<em>str</em>) – the reference frame of this pose</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1185,7 +1178,19 @@ a manipulation group defined in the setup assistant (or the custom.env file)</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="arm_commander.moveit_tools.pose_stamped_to_xyzrpy">
 <span class="sig-prename descclassname"><span class="pre">arm_commander.moveit_tools.</span></span><span class="sig-name descname"><span class="pre">pose_stamped_to_xyzrpy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">the_pose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PoseStamped</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#arm_commander.moveit_tools.pose_stamped_to_xyzrpy" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Convert a pose in a PoseStamped object to a (xyzrpy) list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>the_pose</strong> (<em>PoseStamped</em>) – The pose</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The pose in xyzrpy</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="arm_commander.moveit_tools.same_joint_values_with_tolerence">
@@ -1210,7 +1215,7 @@ a manipulation group defined in the setup assistant (or the custom.env file)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="arm_commander.moveit_tools.same_pose_with_tolerence">
-<span class="sig-prename descclassname"><span class="pre">arm_commander.moveit_tools.</span></span><span class="sig-name descname"><span class="pre">same_pose_with_tolerence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">goal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#arm_commander.moveit_tools.same_pose_with_tolerence" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">arm_commander.moveit_tools.</span></span><span class="sig-name descname"><span class="pre">same_pose_with_tolerence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pose_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pose_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#arm_commander.moveit_tools.same_pose_with_tolerence" title="Permalink to this definition"></a></dt>
 <dd><dl class="simple">
 <dt>Test if the values in two lists are within a tolerance of each other.</dt><dd><p>For Pose and PoseStamped inputs, the angle between the two quaternions is compared (the angle
 between the identical orientations q and -q is calculated correctly).
@@ -1258,7 +1263,22 @@ Applicable for joint space.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="arm_commander.moveit_tools.xyzrpy_to_pose_stamped">
 <span class="sig-prename descclassname"><span class="pre">arm_commander.moveit_tools.</span></span><span class="sig-name descname"><span class="pre">xyzrpy_to_pose_stamped</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xyzrpy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PoseStamped</span></span></span><a class="headerlink" href="#arm_commander.moveit_tools.xyzrpy_to_pose_stamped" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Convert a pose in the form of xyzrpy (list) to a PoseStamped object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xyzrpy</strong> (<em>list</em>) – a list of 6 numbers</p></li>
+<li><p><strong>reference_frame</strong> (<em>str</em>) – the reference frame of this pose</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the created Pose object according to the parameter</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pose</p>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 <section id="module-arm_commander.states">
@@ -1327,8 +1347,7 @@ Applicable for joint space.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="arm_commander.html" class="btn btn-neutral float-left" title="The Arm Commander" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="arm_commander_tutorial_part1.html" class="btn btn-neutral float-right" title="The Arm Commander" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="The Arm Commander" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

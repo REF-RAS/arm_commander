@@ -6,7 +6,7 @@ In addition to the functions for initialization and system settings, the applica
 - Defining the workspace, collision objects, and custom frames of reference
 - Querying the status of the robot arm and the system
 
-This page provides an overview of the API. Refer to the API documentation pages for the details.
+This page provides an overview of the API. Refer to the [Full API Documentation](https://REF-RAS.github.io/arm_commander/build/html/index.html)  for the details.
 
 ## Initialization and System Settings
 

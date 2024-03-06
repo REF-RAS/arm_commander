@@ -111,9 +111,25 @@ def in_region(x:float, y:float, bbox_as_list:list) -> bool:
 # functions for creating Pose and PoseStamp objects
 
 def xyzrpy_to_pose_stamped(xyzrpy:list, reference_frame:str) -> PoseStamped:
+    """ Convert a pose in the form of xyzrpy (list) to a PoseStamped object
+    
+    :param xyzrpy: a list of 6 numbers
+    :type xyzrpy: list
+    :param reference_frame: the reference frame of this pose
+    :type reference_frame: str
+    :return: the created Pose object according to the parameter 
+    :rtype: Pose
+    """
     return conversions.list_to_pose_stamped(xyzrpy, target_frame=reference_frame)
 
 def pose_stamped_to_xyzrpy(the_pose:PoseStamped) -> list:
+    """Convert a pose in a PoseStamped object to a (xyzrpy) list 
+
+    :param the_pose: The pose
+    :type the_pose: PoseStamped
+    :return: The pose in xyzrpy
+    :rtype: list
+    """
     return conversions.pose_to_list(the_pose.pose)
 
 def create_pose(xyzrpy:list) -> Pose:
@@ -129,16 +145,16 @@ def create_pose(xyzrpy:list) -> Pose:
 # -----------------------------------------------
 # functions for creating Pose and PoseStamp objects
 def create_pose_stamped(xyzrpy:list, target_frame:str) -> PoseStamped:
-    """ Convert a pose in the form of xyzrpy (list) to a Pose object
+    """ Convert a pose in the form of xyzrpy (list) to a PoseStamped object
     
     :param xyzrpy: a list of 6 numbers
     :type xyzrpy: list
-    :param xyzrpy: the reference frame of this pose
-    :type xyzrpy: str
+    :param reference_frame: the reference frame of this pose
+    :type reference_frame: str
     :return: the created Pose object according to the parameter 
     :rtype: Pose
     """
-    return conversions.list_to_pose_stamped(xyzrpy, target_frame)
+    return xyzrpy_to_pose_stamped(xyzrpy, target_frame)
 
 # -----------------------------------------------
 # functions for creating Constraints objects

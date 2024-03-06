@@ -41,7 +41,7 @@ Applications can define custom reference frames for specifying move commands rel
 
 ### Design Patterns of Arm Commander-based Robotic Manipulation Applications 
 
-The [Design Gallery](./docs/DESIGN.md) page presents several probable designs of robotic manipulation applications based on the arm commander and a robotic manipulation platform. 
+The [Application Design Gallery](docs/DESIGN.md) page presents several probable designs of robotic manipulation applications based on the arm commander and a robotic manipulation platform. 
 
 ### Application Programming Interface (API)
 
@@ -52,11 +52,11 @@ The application programming interface (API) of the **Arm Commander** can be divi
 
 ![Arm Commander Programming Interface](docs/assets/ArmCommander1.png)
 
-The [API Overview](./docs/API_OVERVIEW.md) page has organized the available functions for browsing. The full [API Documentation](https://REF-RAS.github.io/arm_commander/) is also available for reference.
+The [API Overview](docs/API_OVERVIEW.md) page has organized the available functions for browsing. The [Full API Documentation](https://REF-RAS.github.io/arm_commander/build/html/index.html) is also available for reference.
 
 ## Installation
 
-The [Installation Guide](./docs/INSTALL.md) describes a docker-based and a non-docker based procedures.
+The [Installation Guide](docs/INSTALL.md) describes a docker-based and a non-docker based procedures.
 
 ## The Demonstration Application
 
@@ -81,6 +81,11 @@ A set of tutorials and example programs are provided in this package.
 
 - [Tutorial: Programming with the Arm Commander Package (Part 1)](docs/TUTORIAL_PART1.md)
 - [Tutorial: Programming with the Arm Commander Package (Part 2)](docs/TUTORIAL_PART2.md)
+
+## Links
+- [Application Design Gallery](docs/DESIGN.md) 
+- [API Overview](docs/API_OVERVIEW.md)
+- [Installation Guide](docs/INSTALL.md)
 
 ## Authors
 

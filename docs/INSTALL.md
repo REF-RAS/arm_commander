@@ -95,7 +95,7 @@ source devel/setup.bash
 
 ## Links 
 
-- [Overview: The Arm Commander Package](../README.md)
+- [README: The Arm Commander Package](../README.md)
 
 
 ## Authors

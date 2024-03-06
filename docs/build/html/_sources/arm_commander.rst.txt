@@ -1,1 +1,7 @@
-.. mdinclude:: ../../README.md
+Overview of The Arm Commander (Github Repo)
+===============================================
+
+`Overview of Arm Commander at Github Repo <https://github.com/REF-RAS/arm_commander>`_
+
+.. .. include:: ../../README.md
+..     :parser: myst_parser.sphinx_
