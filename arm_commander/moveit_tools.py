@@ -22,7 +22,7 @@ from actionlib_msgs.msg import GoalStatus
 from shape_msgs.msg import SolidPrimitive
 import tf, tf.transformations
 
-def same_pose_with_tolerence(goal, actual, tolerance:float) -> bool:
+def same_pose_with_tolerence(pose_1, pose_2, tolerance:float) -> bool:
     """ Test if the values in two lists are within a tolerance of each other.
         For Pose and PoseStamped inputs, the angle between the two quaternions is compared (the angle
         between the identical orientations q and -q is calculated correctly).
@@ -37,23 +37,23 @@ def same_pose_with_tolerence(goal, actual, tolerance:float) -> bool:
     :return: True if the goal and actual are the same 
     :rtype: bool
     """   
-    if type(goal) is PoseStamped:
-        return same_pose_with_tolerence(goal.pose, actual.pose, tolerance)
-    elif type(goal) is Pose:
-        x0, y0, z0, qx0, qy0, qz0, qw0 = conversions.pose_to_list(actual)
-        x1, y1, z1, qx1, qy1, qz1, qw1 = conversions.pose_to_list(goal)
-        d = math.dist((x1, y1, z1), (x0, y0, z0)) # euclidean distance
-        cos_phi_half = math.fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1) # angle between orientations
+    if type(pose_1) is PoseStamped:
+        return same_pose_with_tolerence(pose_1.pose, pose_2.pose, tolerance)
+    elif type(pose_1) is Pose:
+        xyzq0 = conversions.pose_to_list(pose_2)
+        xyzq1 = conversions.pose_to_list(pose_1)
+        d = math.dist((xyzq1[0], xyzq1[1], xyzq1[2]), (xyzq0[0], xyzq0[1], xyzq0[2])) 
+        cos_phi_half = math.fabs(xyzq0[3] * xyzq1[3] + xyzq0[4] * xyzq1[4] + xyzq0[5] * xyzq1[5] + xyzq0[6] * xyzq1[6]) 
         return d <= tolerance and cos_phi_half >= math.cos(tolerance / 2.0) 
     else:
-        if type(goal) is list:
-            goal = conversions.list_to_pose(goal)
-        if type(actual) is list:
-            actual = conversions.list_to_pose(actual)  
-        if type(goal) is not Pose or type(actual) is not Pose:
-            print(f'same_pose_with_tolerence: parameter (goal or actual) must be list, Pose, PoseStamped -> fix the missing value at the function call')
+        if type(pose_1) is list:
+            pose_1 = conversions.list_to_pose(pose_1)
+        if type(pose_2) is list:
+            pose_2 = conversions.list_to_pose(pose_2)  
+        if type(pose_1) is not Pose or type(pose_2) is not Pose:
+            print(f'same_pose_with_tolerence: expects pose as a list, Pose, PoseStamped -> fix the missing value at the function call')
             raise AssertionError(f'A parameter is invalid')
-        return same_pose_with_tolerence(goal, actual, tolerance)
+        return same_pose_with_tolerence(pose_1, pose_2, tolerance)
 
 def same_joint_values_with_tolerence(joint_values_1:list, joint_values_2:list, tolerance:float) -> bool:
     """ Test if the two sets of joint values are the same
@@ -111,9 +111,25 @@ def in_region(x:float, y:float, bbox_as_list:list) -> bool:
 # functions for creating Pose and PoseStamp objects
 
 def xyzrpy_to_pose_stamped(xyzrpy:list, reference_frame:str) -> PoseStamped:
+    """ Convert a pose in the form of xyzrpy (list) to a PoseStamped object
+    
+    :param xyzrpy: a list of 6 numbers
+    :type xyzrpy: list
+    :param reference_frame: the reference frame of this pose
+    :type reference_frame: str
+    :return: the created Pose object according to the parameter 
+    :rtype: Pose
+    """
     return conversions.list_to_pose_stamped(xyzrpy, target_frame=reference_frame)
 
 def pose_stamped_to_xyzrpy(the_pose:PoseStamped) -> list:
+    """Convert a pose in a PoseStamped object to a (xyzrpy) list 
+
+    :param the_pose: The pose
+    :type the_pose: PoseStamped
+    :return: The pose in xyzrpy
+    :rtype: list
+    """
     return conversions.pose_to_list(the_pose.pose)
 
 def create_pose(xyzrpy:list) -> Pose:
@@ -129,16 +145,16 @@ def create_pose(xyzrpy:list) -> Pose:
 # -----------------------------------------------
 # functions for creating Pose and PoseStamp objects
 def create_pose_stamped(xyzrpy:list, target_frame:str) -> PoseStamped:
-    """ Convert a pose in the form of xyzrpy (list) to a Pose object
+    """ Convert a pose in the form of xyzrpy (list) to a PoseStamped object
     
     :param xyzrpy: a list of 6 numbers
     :type xyzrpy: list
-    :param xyzrpy: the reference frame of this pose
-    :type xyzrpy: str
+    :param reference_frame: the reference frame of this pose
+    :type reference_frame: str
     :return: the created Pose object according to the parameter 
     :rtype: Pose
     """
-    return conversions.list_to_pose_stamped(xyzrpy, target_frame)
+    return xyzrpy_to_pose_stamped(xyzrpy, target_frame)
 
 # -----------------------------------------------
 # functions for creating Constraints objects

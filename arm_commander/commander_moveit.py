@@ -443,20 +443,19 @@ class GeneralCommander():
     
     # --- Functions for changing the state and parameters of the Commander
     # call to spin this node 
-    def spin(self, spin_in_thread:bool=True):
-        """ A function to put this commander running in a loop for asynchronous operation and autonomous management of the underlying
-            arm manipulation platform. It supports running the loop in a new thread created in the function call, or in the existing thread that
-            makes this call. For the latter case, the existing thread will block and never returns. 
-            
-        :param spin_in_thread: the loop  defaults to True
-        :type spin_in_thread: bool, optional, defaults to True
+    def spin(self, spin_in_thread:bool=True) -> None:
+        """Starts the arm commander. If the parameter is True, the arm_commander is running in a new thread, 
+        If otherwise, the commander is running in the caller's thread, blocking the call.
+
+        :param spin_in_thread: create a new thread for the loop, defaults to True
+        :type spin_in_thread: bool, optional
         """
         if spin_in_thread:
             self.the_thread = threading.Thread(target=rospy.spin, daemon=True)
             self.the_thread.start()
             return
         rospy.spin()
-    
+
     # set the state of the commander to READY, remove records of previous commands and ready to accept new comamnds
     def reset_state(self) -> None:
         """Set the state of the commander to READY, remove records of previous commands and ready to accept new comamnds
@@ -679,27 +678,28 @@ class GeneralCommander():
     # command the robot arm to move the end effector to a position (x, y, z) optionally in a cartesian motion manner and 
     # optionally in a particular frame of reference
     def move_to_position(self, x:float=None, y:float=None, z:float=None, accept_fraction:float=0.9999, cartesian=False, 
-                         reference_frame:str=None, wait=True):
+                         reference_frame:str=None, wait=True) -> Pose:
         """Command the robot arm to move the end effector to a position (x, y, z) optionally 
         in a cartesian motion manner and optionally in a specified frame of reference
 
-        :param x:The target x position, defaults to the current x position
+        :param x: the target x position, defaults to the current x position
         :type x: float, optional
-        :param y: The target y position, defaults to the current y position
+        :param y: the target y position, defaults to the current y position
         :type y: float, optional
-        :param z: The target z position, defaults to the current z position
+        :param z: the target z position, defaults to the current z position
         :type z: float, optional
         :param accept_fraction: the acceptable minimum fraction of the planned path towards the target or abort the command, defaults to 0.9999
         :type accept_fraction: float, optional
-        :param cartesian: Use cartesian motion as the path, defaults to False
+        :param cartesian: use cartesian motion as the path, defaults to False
         :type cartesian: bool, optional
-        :param reference_frame: The frame of reference in which positions are specified, defaults to the world/default
+        :param reference_frame: frame of reference in which positions are specified, defaults to the world/default
         :type reference_frame: str, optional
-        :param wait: The call is blocked until the command has been completed, defaults to True
+        :param wait: the call is blocked until the command has been completed, defaults to True
         :type wait: bool, optional
         :return: The target pose in the given reference frame
         :rtype: Pose
         """
+
         self.action_lock.acquire()
         try:
             if self.commander_state != GeneralCommanderStates.READY:
@@ -738,8 +738,7 @@ class GeneralCommander():
 
     # command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference
     def rotate_to_orientation(self, roll:float=None, pitch:float=None, yaw:float=None, reference_frame:str=None, wait=True):
-        """Command the robot arm to rotate the end effector to an orientation (rpy) optionally in a 
-           particular frame of reference
+        """Command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference
   
         :param roll: The target roll orientation, defaults to the current value 
         :type roll: float, optional
@@ -782,8 +781,8 @@ class GeneralCommander():
     
     # command the robot arm to move the end effector to a pose optionally in a particular frame of reference   
     # the target_pose may be a list of 6 or 7 numbers (xyz+4q) or (xyz+rpy) or Pose or PoseStamped  
-    def move_to_pose(self, target_pose, reference_frame:str=None, wait=True):
-        """command the robot arm to move the end effector to a pose optionally in a particular frame of reference   
+    def move_to_pose(self, target_pose, reference_frame:str=None, wait=True) -> Pose:
+        """Command the robot arm to move the end effector to a pose optionally in a particular frame of reference   
             the target_pose may be a list of 6 numbers (xyz+rpy), 7 numbers (xyz+4q), Pose or PoseStamped 
             
         :param target_pose: The target pose
@@ -830,6 +829,7 @@ class GeneralCommander():
         :return: True on success, else False
         :rtype: bool
         """
+        
         # Error checking on empty servo
         if not isinstance(twist, Twist):
             rospy.logerr(f'[GeneralCommander::servo_robot][Invalid twist provided. Exiting]')
@@ -873,6 +873,7 @@ class GeneralCommander():
     def reset_world(self):
         """Remove all scene objects that have been added through the commander
         """
+        
         self.move_group.detach_object(self.END_EFFECTOR_LINK)
         self.scene.remove_attached_object(self.END_EFFECTOR_LINK)
         self.scene.remove_world_object()
@@ -886,29 +887,29 @@ class GeneralCommander():
             rospy.sleep(0.2)
         rospy.logwarn(f'{__class__.__name__} (_wait_for_scene_update): timeout ({timeout} seconds)')
 
-    # add an object (defined with a meshed model, pose, scale) to the scene
-    def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list):
-        """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
+    # # add an object (defined with a meshed model, pose, scale) to the scene
+    # def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list):
+    #     """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
 
-        :param object_name: The name given to the new scene object
-        :type object_name: str
-        :param model_file: The path to the file that defines the mesh of the object
-        :type model_file: str
-        :param object_scale: The list of scale in 3 dimension
-        :type object_scale: list
-        :param xyz: The position of the object in the world/default reference frame
-        :type xyz: list
-        :param rpy: The orientation of the object in euler angles in the world/default reference frame
-        :type rpy: list
-        """
-        self.scene.remove_world_object(object_name)
-        object_pose = conversions.list_to_pose_stamped(xyz + rpy, self.WORLD_REFERENCE_LINK)
-        self.scene.add_mesh(
-                object_name, object_pose,
-                model_file, object_scale
-        )
-        self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
-        self._pub_transform_object(object_name, object_pose)
+    #     :param object_name: The name given to the new scene object
+    #     :type object_name: str
+    #     :param model_file: The path to the file that defines the mesh of the object
+    #     :type model_file: str
+    #     :param object_scale: The list of scale in 3 dimension
+    #     :type object_scale: list
+    #     :param xyz: The position of the object in the world/default reference frame
+    #     :type xyz: list
+    #     :param rpy: The orientation of the object in euler angles in the world/default reference frame
+    #     :type rpy: list
+    #     """
+    #     self.scene.remove_world_object(object_name)
+    #     object_pose = conversions.list_to_pose_stamped(xyz + rpy, self.WORLD_REFERENCE_LINK)
+    #     self.scene.add_mesh(
+    #             object_name, object_pose,
+    #             model_file, object_scale
+    #     )
+    #     self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
+    #     self._pub_transform_object(object_name, object_pose)
     
     # add an object (defined with a meshed model, pose, scale) to the scene
     def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list, reference_frame:str=None):
@@ -927,6 +928,7 @@ class GeneralCommander():
         :param reference_frame: The frame of reference of the xyz and rpy
         :type reference_frame: str, default to WORLD_REFERENCE_LINK        
         """
+        
         reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
         self.scene.remove_world_object(object_name)
         object_pose = conversions.list_to_pose_stamped(xyz + rpy, reference_frame)
@@ -950,6 +952,7 @@ class GeneralCommander():
         :param reference_frame: The frame of reference of the xyz and rpy
         :type reference_frame: str, default to WORLD_REFERENCE_LINK     
         """
+        
         reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
         object_pose = conversions.list_to_pose_stamped(xyz + [0, 0, 0], reference_frame)
         self.scene.add_sphere(object_name, object_pose, radius)
@@ -959,6 +962,7 @@ class GeneralCommander():
     # add a box (a box of given dimension, position and orientation)    
     def add_box_to_scene(self, object_name:str, dimensions:list, xyz:list, rpy:list=[0, 0, 0], reference_frame:str=None):
         """ Add a box to the scene for collision avoidance in path planning
+        
         :param object_name: The name given to the new scene object
         :type object_name: str
         :param dimensions: The dimensions of the box as a list of 3 floats
@@ -970,6 +974,7 @@ class GeneralCommander():
         :param reference_frame: The frame of reference of the xyz and rpy
         :type reference_frame: str, default to WORLD_REFERENCE_LINK     
         """
+        
         reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
         object_pose = conversions.list_to_pose_stamped(xyz + rpy, reference_frame)
         self.scene.add_box(object_name, object_pose, size=dimensions)
@@ -979,6 +984,7 @@ class GeneralCommander():
     # returns a list of current objects that have been added to the commander
         """ Returns a list of current objects that have been added to the commander
         """
+        
     def list_object_names(self) -> list:
         return self.scene.get_known_object_names()
     
@@ -989,6 +995,7 @@ class GeneralCommander():
         :param object_name: The name of the object, None for removing all objects
         :type object_name: str
         """
+        
         self.scene.remove_world_object(object_name)
         self._wait_for_scene_update(lambda: object_name not in self.scene.get_known_object_names())
 
@@ -1000,6 +1007,7 @@ class GeneralCommander():
         :return: True if the attach is successful
         :rtype: bool
         """
+        
         result = self.move_group.attach_object(object_name, link_name=self.END_EFFECTOR_LINK)
         self._wait_for_scene_update(lambda: len(self.scene.get_attached_objects([object_name]).keys()) > 0)
         return result
@@ -1010,6 +1018,7 @@ class GeneralCommander():
         :param object_name: the name of the object to be detached
         :type object_name: str
         """
+        
         self.move_group.detach_object(object_name)
         # self.scene.remove_attached_object(self.END_EFFECTOR_LINK, name=object_name)
         self._wait_for_scene_update(lambda: len(self.scene.get_attached_objects([object_name]).keys()) == 0)        
@@ -1018,6 +1027,7 @@ class GeneralCommander():
     def detach_all_from_end_effector(self) -> None:
         """ detach all attached objects from the end_effector
         """
+        
         self.move_group.detach_object(self.END_EFFECTOR_LINK) 
         # self.scene.remove_attached_object(self.END_EFFECTOR_LINK)
         self._wait_for_scene_update(lambda: len(self.scene.get_attached_objects([]).keys()) == 0) 
@@ -1054,6 +1064,7 @@ class GeneralCommander():
         :return: The pose of the queried object as a list of 6 floats (xyzrpy)
         :rtype: list
         """
+        
         object_pose = self.get_object_pose(object_name)
         object_pose_as_list = conversions.pose_to_list(object_pose)
         xyzrpy = object_pose_as_list[:3]
@@ -1122,12 +1133,13 @@ class GeneralCommander():
     # functions for setting path constraints
       
     def add_path_constraints(self, constraint):
-        """Add a constraint to the commander. Refer to :class:'moveit_tool' for functions to conveniently create
+        """Add a constraint to the commander. Refer to :module:'arm_commander.moveit_tools' for functions to conveniently create
         a constraint object 
 
         :param constraint: The constraint to be added to the commander
         :type constraint: OrientationConstraint, JointConstraint or PositionConstraint
         """
+        
         the_type = type(constraint)
         if the_type == OrientationConstraint:
             self.the_constraints.orientation_constraints.append(constraint)
@@ -1140,6 +1152,7 @@ class GeneralCommander():
     def clear_path_constraints(self):
         """Clear all the added constraints in the commander
         """
+        
         self.the_constraints.orientation_constraints.clear()
         self.the_constraints.joint_constraints.clear()
         self.the_constraints.position_constraints.clear()
@@ -1148,11 +1161,13 @@ class GeneralCommander():
     def disable_path_constraints(self):
         """Disable the added constraints from taking effect in the next commands
         """
+        
         self.move_group.set_path_constraints(None)
         
     def enable_path_constraints(self):
         """Enable the added constraints
         """
+        
         self.move_group.set_path_constraints(self.the_constraints)
 
 # ------------------------------------------------------------------------------------

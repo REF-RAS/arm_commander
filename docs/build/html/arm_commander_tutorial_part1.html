@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tutorial: Programming with the Arm Commander Package (Part 1) &mdash; Arm Commander 0.1 documentation</title>
+  <title>&lt;no title&gt; &mdash; Arm Commander 0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -20,9 +20,7 @@
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Tutorial: Programming with the Arm Commander Package (Part 2)" href="arm_commander_tutorial_part2.html" />
-    <link rel="prev" title="The Arm Commander: API Documentation" href="arm_commander_modules.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -45,41 +43,9 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander.html">The Arm Commander Package</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="arm_commander.html">Overview of The Arm Commander</a></li>
 <li class="toctree-l1"><a class="reference internal" href="arm_commander_modules.html">The Arm Commander: API Documentation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial: Programming with the Arm Commander Package (Part 1)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#example-programs">Example Programs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#the-basics">The Basics</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#import-the-arm-commander-in-python">Import the Arm Commander in Python</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#the-first-program">The First Program</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#create-the-general-arm-commander">Create the General Arm Commander</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#important-the-threading-model">Important: The Threading Model</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#graceful-handling-of-program-interrupts">Graceful Handling of Program Interrupts</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#move-to-a-xyz-position">Move to a XYZ Position</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#the-states-of-the-general-arm-commander">The States of the General Arm Commander</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#asynchronous-commands">Asynchronous Commands</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#abort-the-current-move-commands">Abort the Current Move Commands</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#other-move-to-position-and-orientation-commands">Other Move to Position and Orientation Commands</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#move-using-a-displacement">Move using a displacement</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#rotate">Rotate</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#move-to-both-position-and-orientation">Move to Both Position and Orientation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#cartesian-movement">Cartesian Movement</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#links">Links</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#author">Author</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part2.html">Tutorial: Programming with the Arm Commander Package (Part 2)</a></li>
 </ul>
 
         </div>
@@ -96,7 +62,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Tutorial: Programming with the Arm Commander Package (Part 1)</li>
+      <li class="breadcrumb-item active">&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/arm_commander_tutorial_part1.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -106,251 +72,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="tutorial-programming-with-the-arm-commander-package-part-1">
-<h1>Tutorial: Programming with the Arm Commander Package (Part 1)<a class="headerlink" href="#tutorial-programming-with-the-arm-commander-package-part-1" title="Permalink to this heading"></a></h1>
-<p>Part 1 of the tutorial covers the basics of programming with arm commander package, including the first programs covering the essentials of the package and the primitive move commands.</p>
-<section id="requirements">
-<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p><a class="reference external" href="https://ros-planning.github.io/moveit_tutorials/">Moveit 1</a></p></li>
-<li><p>ROS 1</p></li>
-<li><p>Python 3.8 or above</p></li>
-</ul>
-</section>
-<section id="example-programs">
-<h2>Example Programs<a class="headerlink" href="#example-programs" title="Permalink to this heading"></a></h2>
-<p>Example programs are provided for illustrating how to use the <strong>general arm commander</strong> package in programming robot arm manipulations. They are can found under the directory <code class="docutils literal notranslate"><span class="pre">[Package</span> <span class="pre">Home]/examples</span></code>. The programs are divided into four sub-directories:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">move</span></code>: examples on basic move commands and asynchronous programming support</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">framemove</span></code>: examples on move commands with custom reference frames</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">named_poses</span></code>: examples on move commands to named joint-space poses</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">collision</span></code>: examples on collision avoidance, collision objects, and path constraints.</p></li>
-</ul>
-</section>
-<section id="the-basics">
-<h2>The Basics<a class="headerlink" href="#the-basics" title="Permalink to this heading"></a></h2>
-<p>The essential Python modules are found in the following three files.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">commander_moveit.py</span></code>: defines main classes including the <code class="docutils literal notranslate"><span class="pre">GeneralCommander</span></code> and the factory class <code class="docutils literal notranslate"><span class="pre">GeneralCommanderFactory</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">states.py</span></code>: defines the key <code class="docutils literal notranslate"><span class="pre">Enum</span></code> classes for state management.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">moveit_tools.py</span></code>: defines utility and helper functions.</p></li>
-</ul>
-<section id="import-the-arm-commander-in-python">
-<h3>Import the Arm Commander in Python<a class="headerlink" href="#import-the-arm-commander-in-python" title="Permalink to this heading"></a></h3>
-<p>To use the Python arm_commander interface, import the modules in the concerned Python program file as below.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">arm_commander.commander_moveit</span> <span class="kn">import</span> <span class="n">GeneralCommander</span><span class="p">,</span> <span class="n">GeneralCommanderFactory</span>
-<span class="kn">from</span> <span class="nn">arm_commander.states</span> <span class="kn">import</span> <span class="n">ControllerState</span><span class="p">,</span> <span class="n">GeneralCommanderStates</span>
-<span class="kn">import</span> <span class="nn">arm_commander.moveit_tools</span> <span class="k">as</span> <span class="nn">moveit_tools</span>
-</pre></div>
-</div>
-</section>
-<section id="the-first-program">
-<h3>The First Program<a class="headerlink" href="#the-first-program" title="Permalink to this heading"></a></h3>
-<p>The program file <code class="docutils literal notranslate"><span class="pre">move/simple_move_1.py</span></code> illustrates the essentials of programming with the arm commander.</p>
-<section id="create-the-general-arm-commander">
-<h4>Create the General Arm Commander<a class="headerlink" href="#create-the-general-arm-commander" title="Permalink to this heading"></a></h4>
-<p>The string parameter <code class="docutils literal notranslate"><span class="pre">panda_arm</span></code> specifies the <strong>move_group</strong> as defined in the robot arm configuration (<code class="docutils literal notranslate"><span class="pre">panda_moveit_config</span></code>).</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">arm_commander</span><span class="p">:</span> <span class="n">GeneralCommander</span> <span class="o">=</span> <span class="n">GeneralCommanderFactory</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="s1">&#39;panda_arm&#39;</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">spin</span><span class="p">(</span><span class="n">spin_in_thread</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">wait_for_ready_to_move</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="important-the-threading-model">
-<h4>Important: The Threading Model<a class="headerlink" href="#important-the-threading-model" title="Permalink to this heading"></a></h4>
-<p>The GeneralCommander object must run in a different thread from the client that uses the object. The independent thread can be created as part of the call to the <code class="docutils literal notranslate"><span class="pre">spin()</span></code> function as shown below.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">arm_commander</span><span class="o">.</span><span class="n">spin</span><span class="p">(</span><span class="n">spin_in_thread</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Alternatively, the client can create a new thread and use it to execute the spin function. In this case, the parameter <code class="docutils literal notranslate"><span class="pre">spin_in_thread</span></code> should be False and the function call will <strong>not</strong> return, as shown below.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ArmCommanderMoveExample</span><span class="p">():</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="o">...</span>
-        <span class="n">arm_commander</span><span class="p">:</span> <span class="n">GeneralCommander</span> <span class="o">=</span> <span class="n">GeneralCommanderFactory</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="s1">&#39;panda_arm&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">arm_commander</span> <span class="o">=</span> <span class="n">arm_commander</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">the_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">spin_commander</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">the_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-        <span class="o">...</span>
-
-    <span class="k">def</span> <span class="nf">spin_commander</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">arm_commander</span><span class="o">.</span><span class="n">spin</span><span class="p">(</span><span class="n">spin_in_thread</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="graceful-handling-of-program-interrupts">
-<h4>Graceful Handling of Program Interrupts<a class="headerlink" href="#graceful-handling-of-program-interrupts" title="Permalink to this heading"></a></h4>
-<p>As a good practice, client programs of the general arm commander should abort any move command before termination (whether self-induced or otherwise). The following is recommended.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">ArmCommanderMoveExample</span><span class="p">():</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="o">...</span>
-        <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">)</span>
-        <span class="n">arm_commander</span><span class="p">:</span> <span class="n">GeneralCommander</span> <span class="o">=</span> <span class="n">GeneralCommanderFactory</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="s1">&#39;panda_arm&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">arm_commander</span> <span class="o">=</span> <span class="n">arm_commander</span>
-        <span class="o">...</span>
-
-    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">arm_commander</span><span class="o">.</span><span class="n">abort_move</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">arm_commander</span><span class="o">.</span><span class="n">clear_path_constraints</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_world</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="move-to-a-xyz-position">
-<h4>Move to a XYZ Position<a class="headerlink" href="#move-to-a-xyz-position" title="Permalink to this heading"></a></h4>
-<p>The function <code class="docutils literal notranslate"><span class="pre">move_to_position()</span></code> commands (the end-effector of) the arm to move to a position specified in XYZ.</p>
-<ul class="simple">
-<li><p>The XYZ are specified as three component parameters.</p></li>
-<li><p>Their parameter values are defaulted to the current XYZ. In the second function call, the target of the move command is
-x (0.4), y (0.2) and the z will remain unchanged.</p></li>
-<li><p>The parameter <code class="docutils literal notranslate"><span class="pre">wait</span></code> specifies whether the move command is synchronous (True) or asynchronous (False).</p></li>
-<li><p>A synchronous command call is blocking. The execution returns only after the command execution is completed.</p></li>
-<li><p>The function <code class="docutils literal notranslate"><span class="pre">reset_state()</span></code> must be called before issuing another move command to the general arm commander.</p></li>
-</ul>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># send a move command</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.6</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-<span class="c1"># send a move command</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>The general arm commander uses states to regulate the interaction with the client program. For example, the state notifies the client if the
-command was successful or failed.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">the_state</span> <span class="o">=</span> <span class="n">arm_commander</span><span class="o">.</span><span class="n">get_commander_state</span><span class="p">()</span>
-<span class="k">if</span> <span class="n">the_state</span> <span class="o">==</span> <span class="n">GeneralCommanderStates</span><span class="o">.</span><span class="n">SUCCEEDED</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The move was successful&#39;</span><span class="p">)</span>
-<span class="k">elif</span> <span class="n">the_state</span> <span class="ow">in</span> <span class="p">[</span><span class="n">GeneralCommanderStates</span><span class="o">.</span><span class="n">ABORTED</span><span class="p">,</span> <span class="n">GeneralCommanderStates</span><span class="o">.</span><span class="n">ERROR</span><span class="p">]:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error: </span><span class="si">{</span><span class="n">arm_commander</span><span class="o">.</span><span class="n">get_error_code</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="the-states-of-the-general-arm-commander">
-<h4>The States of the General Arm Commander<a class="headerlink" href="#the-states-of-the-general-arm-commander" title="Permalink to this heading"></a></h4>
-<p>The following figure shows the states of the general arm commander and their significance to the client programs</p>
-<a class="reference external image-reference" href="assets/GeneralCommanderStates.png"><img alt="General Commander States" src="assets/GeneralCommanderStates.png" /></a>
-</section>
-</section>
-<section id="asynchronous-commands">
-<h3>Asynchronous Commands<a class="headerlink" href="#asynchronous-commands" title="Permalink to this heading"></a></h3>
-<p>Specifying move commands asynchronously enables the execution of other tasks while the move command is being handled by the general arm commander. Set the parameter <code class="docutils literal notranslate"><span class="pre">wait</span></code> to False to signify that the command is asynchronous. The execution returns to the caller before the command is completed.</p>
-<p>Addition logic is required for asynchronous move commands, such as a polling loop as below. The source code is from <code class="docutils literal notranslate"><span class="pre">simple_move_2.py</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-    <span class="n">the_state</span> <span class="o">=</span> <span class="n">arm_commander</span><span class="o">.</span><span class="n">get_commander_state</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">the_state</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">GeneralCommanderStates</span><span class="o">.</span><span class="n">BUSY</span><span class="p">]:</span>
-        <span class="k">break</span>
-    <span class="n">rospy</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-<span class="o">...</span>
-</pre></div>
-</div>
-<p>Alternatively, use the function <code class="docutils literal notranslate"><span class="pre">wait_for_busy_end()</span></code> for a blocking wait of the end of the <code class="docutils literal notranslate"><span class="pre">BUSY</span></code> state.</p>
-<section id="abort-the-current-move-commands">
-<h4>Abort the Current Move Commands<a class="headerlink" href="#abort-the-current-move-commands" title="Permalink to this heading"></a></h4>
-<p>The function <code class="docutils literal notranslate"><span class="pre">abort_move()</span></code> terminates the current move command. If the parameter <code class="docutils literal notranslate"><span class="pre">wait</span></code> is True, the function does not return until the abort has been
-handled by the underlying platform completely and the state will become <code class="docutils literal notranslate"><span class="pre">GeneralCommanderStates.ABORTED</span></code>.</p>
-<p>The following source code is from <code class="docutils literal notranslate"><span class="pre">simple_move_3.py</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="c1"># abort the command after 3 seconds and wait for the abort to take effect</span>
-<span class="n">rospy</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">abort_move</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-<span class="o">...</span>
-</pre></div>
-</div>
-</section>
-</section>
-<section id="other-move-to-position-and-orientation-commands">
-<h3>Other Move to Position and Orientation Commands<a class="headerlink" href="#other-move-to-position-and-orientation-commands" title="Permalink to this heading"></a></h3>
-<section id="move-using-a-displacement">
-<h4>Move using a displacement<a class="headerlink" href="#move-using-a-displacement" title="Permalink to this heading"></a></h4>
-<p>The function <code class="docutils literal notranslate"><span class="pre">move_displacement()</span></code> commands the robot arm to move based on a displacement from the current position. The following source code is from <code class="docutils literal notranslate"><span class="pre">simple_move_4.py</span></code>.  The end-effector will move 10 cm ten times.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-    <span class="n">arm_commander</span><span class="o">.</span><span class="n">move_displacement</span><span class="p">(</span><span class="n">dy</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="rotate">
-<h4>Rotate<a class="headerlink" href="#rotate" title="Permalink to this heading"></a></h4>
-<p>The function <code class="docutils literal notranslate"><span class="pre">rotate_to_orientation()</span></code> commands the end-effector to rotate according to the given Euler’s angles (roll, pitch, and yaw). The following source code is from <code class="docutils literal notranslate"><span class="pre">simple_move_4.py</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">arm_commander</span><span class="o">.</span><span class="n">rotate_to_orientation</span><span class="p">(</span><span class="n">roll</span> <span class="o">=</span> <span class="mf">3.14</span><span class="p">,</span> <span class="n">pitch</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">yaw</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>The default values of the three component parameters are the current values.</p>
-</section>
-<section id="move-to-both-position-and-orientation">
-<h4>Move to Both Position and Orientation<a class="headerlink" href="#move-to-both-position-and-orientation" title="Permalink to this heading"></a></h4>
-<p>The function <code class="docutils literal notranslate"><span class="pre">move_pose()</span></code> commands the end-effector to move to a target pose, which can be of type <code class="docutils literal notranslate"><span class="pre">Pose</span></code> or <code class="docutils literal notranslate"><span class="pre">PoseStamped</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pose</span> <span class="o">=</span> <span class="n">Pose</span><span class="p">()</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.4</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="mf">0.2</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="mf">0.6</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="n">pose</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="mf">1.0</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_pose</span><span class="p">(</span><span class="n">pose</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>The helper function <code class="docutils literal notranslate"><span class="pre">create_pose()</span></code> from the module <code class="docutils literal notranslate"><span class="pre">moveit_tools</span></code> offers conversion of a list of <code class="docutils literal notranslate"><span class="pre">xyzrpy</span></code> or <code class="docutils literal notranslate"><span class="pre">xyzqqqq</span></code> into <code class="docutils literal notranslate"><span class="pre">Pose</span></code> or <code class="docutils literal notranslate"><span class="pre">PoseStamped</span></code>.
-The following source code is from <code class="docutils literal notranslate"><span class="pre">frame_move_1.py</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">xyzrpy</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">3.14</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">]</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_pose</span><span class="p">(</span><span class="n">moveit_tools</span><span class="o">.</span><span class="n">create_pose</span><span class="p">(</span><span class="n">xyzrpy</span><span class="p">),</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-</pre></div>
-</div>
-<a class="reference external image-reference" href="assets/ArmCommander-SimpleMove5.gif"><img alt="Animation of the Movement" src="assets/ArmCommander-SimpleMove5.gif" /></a>
-</section>
-<section id="cartesian-movement">
-<h4>Cartesian Movement<a class="headerlink" href="#cartesian-movement" title="Permalink to this heading"></a></h4>
-<p>The function <code class="docutils literal notranslate"><span class="pre">move_position()</span></code> supports both cartesian path planning (with collision avoidance) and algorithmic path planning (based on a path planner).
-Setting the parameter <code class="docutils literal notranslate"><span class="pre">cartesian</span></code> to True turns on cartesian path planning.  The following source code, found in<code class="docutils literal notranslate"><span class="pre">simple_move_5.py</span></code> compares the two
-types of path planning.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># send a move command, z is defaulted to the current z value</span>
-<span class="n">rospy</span><span class="o">.</span><span class="n">loginfo</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Go back to start&#39;</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-
-<span class="c1"># send a move command moveing back to the original position, constrained cartesian movement</span>
-<span class="n">rospy</span><span class="o">.</span><span class="n">loginfo</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;From start to target (cartesian is True)&#39;</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">move_to_position</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">cartesian</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">arm_commander</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-</section>
-</section>
-<section id="links">
-<h2>Links<a class="headerlink" href="#links" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p><a class="reference external" href="../README.md">Overview: The Arm Commander Package</a></p></li>
-<li><p><a class="reference external" href="TUTORIAL_PART2.md">Tutorial: Programming with the Arm Commander Package (Part 2)</a></p></li>
-</ul>
-</section>
-<section id="author">
-<h2>Author<a class="headerlink" href="#author" title="Permalink to this heading"></a></h2>
-<p>Dr Andrew Lui, Senior Research Engineer <span class="raw-html-m2r"><br /></span>
-Robotics and Autonomous Systems, Research Engineering Facility <span class="raw-html-m2r"><br /></span>
-Research Infrastructure <span class="raw-html-m2r"><br /></span>
-Queensland University of Technology <span class="raw-html-m2r"><br /></span></p>
-<p>Latest update: Feb 2024</p>
-</section>
-</section>
-
+  
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="arm_commander_modules.html" class="btn btn-neutral float-left" title="The Arm Commander: API Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="arm_commander_tutorial_part2.html" class="btn btn-neutral float-right" title="Tutorial: Programming with the Arm Commander Package (Part 2)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

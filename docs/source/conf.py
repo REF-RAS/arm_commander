@@ -14,8 +14,10 @@
 #
 import os
 import sys
+import myst_parser
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../tutorials'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../examples'))
 
 # -- Project information -----------------------------------------------------
 
@@ -28,7 +30,6 @@ version = ''
 # The full version, including alpha/beta/rc tags
 release = '0.1'
 
-
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -40,8 +41,10 @@ release = '0.1'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',   
-    'm2r2',
+    'myst_parser',
 ]
+
+myst_all_links_external = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

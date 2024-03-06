@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Arm Commander Package &mdash; Arm Commander 0.1 documentation</title>
+  <title>The Arm Commander &mdash; Arm Commander 0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -21,7 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="The Arm Commander Package" href="arm_commander.html" /> 
+    <link rel="next" title="The Arm Commander: API Documentation" href="arm_commander_modules.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -44,12 +44,8 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander.html">The Arm Commander Package</a></li>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="arm_commander_modules.html">The Arm Commander: API Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part1.html">Tutorial: Programming with the Arm Commander Package (Part 1)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part2.html">Tutorial: Programming with the Arm Commander Package (Part 2)</a></li>
 </ul>
 
         </div>
@@ -66,7 +62,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">The Arm Commander Package</li>
+      <li class="breadcrumb-item active">The Arm Commander</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -76,150 +72,15 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="the-arm-commander-package">
-<h1>The Arm Commander Package<a class="headerlink" href="#the-arm-commander-package" title="Permalink to this heading"></a></h1>
-<a class="reference external image-reference" href="https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github"><img alt="QUT REF Collection" src="https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github" /></a>
-<a class="reference external image-reference" href="https://opensource.org/licenses/BSD-3-Clause"><img alt="License" src="https://img.shields.io/badge/License-BSD_3--Clause-blue.svg" /></a>
-<!--
-Replace REPO_USER, & REPO_NAME in the lines below to get more auto-generated badges
-![Primary language](https://img.shields.io/github/languages/top/REPO_USER/REPO_NAME)
-[![License](https://img.shields.io/github/license/REPO_USER/REPO_NAME)](./BSD.txt)
---><p>The <strong>Arm Commander</strong> is a library providing an enhanced interface for robot arm manipulation. It is designed to wrap around a robot arm movement planner (i.e. robotic manipulation platforms) such as <a class="reference external" href="https://ros-planning.github.io/moveit_tutorials/">Moveit</a> or <a class="reference external" href="https://github.com/qcr/armer">Armer</a> and to offer features that achieve more with less programming:</p>
-<ul class="simple">
-<li><p>Multiple forms of movement target specification</p>
-<ul>
-<li><p>Pose</p></li>
-<li><p>PoseStamped</p></li>
-<li><p>A list of 6 numbers (xyzrpy)</p></li>
-<li><p>A list of 7 numbers (xyzqqqq)</p></li>
-<li><p>The position components with defaults (x, y, and z)</p>
-<ul>
-<li><p>The missing parameters are defaulted to the current values</p></li>
-</ul>
-</li>
-<li><p>The rotation components with defaults (roll, pitch, and yaw)</p>
-<ul>
-<li><p>The missing parameters are defaulted to the current values</p></li>
-</ul>
-</li>
-<li><p>Displacement components (dx, dy, dz)</p></li>
-</ul>
-</li>
-<li><p>Simple switch between cartesian path and planned path.</p>
-<ul>
-<li><p>In a move command along a cartesian path, fractional execution is supported.</p></li>
-</ul>
-</li>
-<li><p>Addition and removal of collision objects for path planning and pose transform</p>
-<ul>
-<li><p>Primitive shapes (box and sphere) and custom shapes are supported.</p></li>
-<li><p>Pose transform between collision objects and robot links is supported through the tranform tree.</p></li>
-<li><p>Attach and detach of objects for grab and drop simulation.</p></li>
-</ul>
-</li>
-<li><p>Asynchronous and synchronous command support</p>
-<ul>
-<li><p>State transition model for command management.</p></li>
-<li><p>Convenient functions for waiting, polling, and aborting of commands.</p></li>
-</ul>
-</li>
-<li><p>Addition and removal of contraints</p>
-<ul>
-<li><p>Helper function for the creation of rotation, position, and joint-space constraints</p></li>
-</ul>
-</li>
-<li><p>Agnostic to the robotic manipulation platform design-wise (though this implementation supports only Moveit)</p></li>
-<li><p>Agnostic to the robot arm model (through the underlying robotic manipulation platform)</p></li>
-</ul>
-<section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
-<p>The arm_commander stems from an architecture that is robot model agnostic and arm manipulation platform agnostic. It hides away the
-details and offers a consistent application programming interface.</p>
-<p>This implementation of arm_commander is specific to Moveit Version 1 (and therefore ROS Noetic). An environment installed with Moveit + ROS Noetic is needed. For your convenience, please refer to the docker image from the <a class="reference external" href="https://github.com/REF-RAS/docker_deployment">docker deployment</a> repository of the REF-RAS group.</p>
-<section id="install-moveit-non-docker-method">
-<h3>Install Moveit (Non-Docker Method)<a class="headerlink" href="#install-moveit-non-docker-method" title="Permalink to this heading"></a></h3>
-<p>The non-docker method assumes the starting point of having ROS Noetic installed.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sudo</span> <span class="n">apt</span><span class="o">-</span><span class="n">get</span> <span class="n">update</span>
-<span class="n">sudo</span> <span class="n">apt</span><span class="o">-</span><span class="n">get</span> <span class="n">install</span> <span class="n">ros</span><span class="o">-</span><span class="n">noetic</span><span class="o">-</span><span class="n">moveit</span> <span class="o">-</span><span class="n">y</span>
-</pre></div>
-</div>
-</section>
-<section id="install-arm-commander">
-<h3>Install Arm Commander<a class="headerlink" href="#install-arm-commander" title="Permalink to this heading"></a></h3>
-<p>Create a catkin workspace.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mkdir</span> <span class="o">-</span><span class="n">p</span> <span class="o">~/</span><span class="n">arm_commander_ws</span><span class="o">/</span><span class="n">src</span>
-<span class="n">cd</span> <span class="o">~/</span><span class="n">arm_commander_ws</span><span class="o">/</span><span class="n">src</span>
-</pre></div>
-</div>
-<p>Clone this repository to the <code class="docutils literal notranslate"><span class="pre">src</span></code> directory.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="nd">@github</span><span class="o">.</span><span class="n">com</span><span class="p">:</span><span class="n">REF</span><span class="o">-</span><span class="n">RAS</span><span class="o">/</span><span class="n">arm_commander</span><span class="o">.</span><span class="n">git</span>
-</pre></div>
-</div>
-</section>
-<section id="install-a-robot-arm-model">
-<h3>Install a Robot Arm Model<a class="headerlink" href="#install-a-robot-arm-model" title="Permalink to this heading"></a></h3>
-<p>The demo program and the tutorial programs are designed to work with the dimension of a Panda.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">~/</span><span class="n">arm_commander_ws</span><span class="o">/</span><span class="n">src</span>
-<span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">ros</span><span class="o">-</span><span class="n">planning</span><span class="o">/</span><span class="n">panda_moveit_config</span><span class="o">.</span><span class="n">git</span> <span class="o">-</span><span class="n">b</span> <span class="n">noetic</span><span class="o">-</span><span class="n">devel</span>
-</pre></div>
-</div>
-</section>
-<section id="build-the-packages">
-<h3>Build the Packages<a class="headerlink" href="#build-the-packages" title="Permalink to this heading"></a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>rosdep install --from-paths src --ignore-src -r -y --rosdistro ${ROS_DISTRO}
-source /opt/ros/${ROS_DISTRO}/setup.bash
-catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3
-</pre></div>
-</div>
-</section>
-</section>
-<section id="demonstration">
-<h2>Demonstration<a class="headerlink" href="#demonstration" title="Permalink to this heading"></a></h2>
-<p>The demo program is located at <code class="docutils literal notranslate"><span class="pre">[Package</span> <span class="pre">Root]/arm_commander/commander_demo.py</span></code>. To look at the demo, fire up the Panda model on RViz.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">roslaunch</span> <span class="n">panda_moveit_config</span> <span class="n">demo</span><span class="o">.</span><span class="n">launch</span>
-</pre></div>
-</div>
-<p>Then execute the demo program.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">~/</span><span class="n">arm_commander_ws</span>
-<span class="n">source</span> <span class="n">devel</span><span class="o">/</span><span class="n">setup</span><span class="o">.</span><span class="n">bash</span>
-<span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">python3</span> <span class="o">./</span><span class="n">src</span><span class="o">/</span><span class="n">arm_commander</span><span class="o">/</span><span class="n">arm_commander</span><span class="o">/</span><span class="n">commander_demo</span><span class="o">.</span><span class="n">py</span>
-</pre></div>
-</div>
-<p>Video of the demo program</p>
-<a class="reference external image-reference" href="https://www.youtube.com/watch?v=YleDRs649VA"><img alt="Watch the demo" src="https://img.youtube.com/vi/YleDRs649VA/0.jpg" /></a>
-</section>
-<section id="tutorials">
-<h2>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this heading"></a></h2>
-<p>A set of tutorials and example programs are provided in this package.</p>
-<ul class="simple">
-<li><p><a class="reference external" href="docs/TUTORIAL_PART1.md">Tutorial: Programming with the Arm Commander Package (Part 1)</a></p></li>
-<li><p><a class="reference external" href="docs/TUTORIAL_PART2.md">Tutorial: Programming with the Arm Commander Package (Part 2)</a></p></li>
-</ul>
-</section>
-<section id="api-documentation">
-<h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this heading"></a></h2>
-<p><a class="reference external" href="https://REF-RAS.github.io/robotarchi/">API Documentation</a> is available for reference.</p>
-</section>
-<section id="authors">
-<h2>Authors<a class="headerlink" href="#authors" title="Permalink to this heading"></a></h2>
-<p>Dr Andrew Lui, Senior Research Engineer <span class="raw-html-m2r"><br /></span>
-Dr Dasun Gunasinghe, Senior Research Engineer <span class="raw-html-m2r"><br /></span>
-Robotics and Autonomous Systems, Research Engineering Facility <span class="raw-html-m2r"><br /></span>
-Research Infrastructure <span class="raw-html-m2r"><br /></span>
-Queensland University of Technology <span class="raw-html-m2r"><br /></span></p>
-<p>Latest update: Feb 2024</p>
+  <section id="the-arm-commander">
+<h1>The Arm Commander<a class="headerlink" href="#the-arm-commander" title="Permalink to this heading"></a></h1>
+<p>This page contains API references of the arm commander.</p>
+<p>Visit the <a class="reference external" href="https://github.com/REF-RAS/arm_commander">Overview of Arm Commander</a>
+at the Github Repo for programming resources such as the overview of the API,
+recommended design patterns, and programming tutorials.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander.html">The Arm Commander Package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander.html#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander.html#demonstration">Demonstration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander.html#tutorials">Tutorials</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander.html#api-documentation">API Documentation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander.html#authors">Authors</a></li>
-</ul>
-</li>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="arm_commander_modules.html">The Arm Commander: API Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="arm_commander_modules.html#module-arm_commander.commander_moveit">arm_commander.commander_moveit module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="arm_commander_modules.html#module-arm_commander.moveit_tools">arm_commander.moveit_tools module</a></li>
@@ -227,28 +88,8 @@ Queensland University of Technology <span class="raw-html-m2r"><br /></span></p>
 <li class="toctree-l2"><a class="reference internal" href="arm_commander_modules.html#module-arm_commander">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part1.html">Tutorial: Programming with the Arm Commander Package (Part 1)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part1.html#requirements">Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part1.html#example-programs">Example Programs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part1.html#the-basics">The Basics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part1.html#links">Links</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part1.html#author">Author</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="arm_commander_tutorial_part2.html">Tutorial: Programming with the Arm Commander Package (Part 2)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#the-named-joint-space-poses">The Named Joint-Space Poses</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#movement-according-to-different-reference-frames">Movement According to Different Reference Frames</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#a-summary-of-move-functions">A Summary of Move Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#workspace-collision-avoidance-and-constraints">Workspace, Collision Avoidance, and Constraints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#collision-avoidance">Collision Avoidance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#constraints">Constraints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#links">Links</a></li>
-<li class="toctree-l2"><a class="reference internal" href="arm_commander_tutorial_part2.html#author">Author</a></li>
-</ul>
-</li>
 </ul>
 </div>
-</section>
 </section>
 <section id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
@@ -263,7 +104,7 @@ Queensland University of Technology <span class="raw-html-m2r"><br /></span></p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="arm_commander.html" class="btn btn-neutral float-right" title="The Arm Commander Package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="arm_commander_modules.html" class="btn btn-neutral float-right" title="The Arm Commander: API Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
