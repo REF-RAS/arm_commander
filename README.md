@@ -11,6 +11,8 @@ The **Arm Commander** is a Python programming module for accelerating the develo
 
 The arm commander defines a model programming interface for general robot arm manipulation and comprises the components for mapping move commands between the application and the underlying robotic manipulation platforms or arm movement planners such as [Moveit](https://ros-planning.github.io/moveit_tutorials/). It is expected that applications based on the **Arm Commander** can switch between Moveit 1, Moveit 2, and other platforms almost seamlessly. The current version works with [Moveit 1](https://ros-planning.github.io/moveit_tutorials/) and ROS Noetic. A long-term objective is to attain manipulation platform angostic and robot model agnostic support of application development.
 
+![Demo Animation](docs/assets/DemoArmCommander.gif)
+
 The arm commander is a critical component of the **Task Trees**, which is a SDK for building reusable and resilient behaviour tree-based robotic manipulation applications. Refer to the [Task Trees Github Repo](https://github.com/RAS-REF/task_trees) for the details.
 
 The following figure the relation between the application, the arm commander, and the underlying robotic manipulation platform.
@@ -70,10 +72,10 @@ cd ~/arm_commander_ws
 source devel/setup.bash
 /usr/bin/python3 ./src/arm_commander/arm_commander/commander_demo.py
 ```
-Click on the following link to watch the robot arm movement as directed by the demo application
-
-[![Watch the demo](https://img.youtube.com/vi/YleDRs649VA/0.jpg)](https://www.youtube.com/watch?v=YleDRs649VA)
-
+The demo program is registered with the catkin workspace. The last command may be replaced by the following.
+```
+rosrun arm_commander commander_demo.py
+```
 
 ## Programming Tutorials
 
