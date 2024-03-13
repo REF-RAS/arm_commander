@@ -113,7 +113,14 @@ The `wait` parameter is another common feature that specifies the call is asynch
 | move_displacement | The dx, dy, and dz | cartesian path |
 | move_to_position | The target x, y, and z, the reference frame, and path planning | |
 | rotate_to_orientation | The target roll, pitch, and yaw, the reference frame, and path planning | |
-| move_to_pose | Pose, PoseStamped, a list (xyzrpy) or a list (xyzqqqq) | |
+| move_to_pose | Pose, PoseStamped, a 6-list (xyzrpy) or a 7-list (xyzqqqq) | |
+
+The following functions accepts multiple positions or poses in one move command. The path is always cartesian.
+
+| Functions | Parameters | Remarks |
+| -------- | ---------- | ------- |
+| move_to_multi_positions | A list of 3-tuple (x, y, z) or 3-list [x, y, z], and the reference frame | Supports default value in waypoints |
+| move_to_multi-poses | A list of waypoints, each of which can be a Pose, PoseStamped, a 6-list (xyzrpy) or a 7-list (xyzqqqq) | Default value in waypoints not supported
 
 ### Example: Issuing an Asynchronous Move Command
 
@@ -126,6 +133,22 @@ while True:
         break
     rospy.sleep(0.1)
 arm_commander.reset_state()
+
+### Example: Issuing an Multi-Waypoints Move Command
+
+The following shows an example of issuing a move command comprising multiple waypoints.
+```
+xyzrpy_list = [(0.6, 0.0, 0.4, 3.14, 0, 0), 
+            (0.6, 0.2, 0.5, 3.14, 0, 0), 
+            (0.6, 0.2, 0.6, 3.14, 0, 1.58)]
+
+arm_commander.move_to_multi_poses(waypoints_list=xyzrpy_list, wait=True)
+
+the_state = arm_commander.get_commander_state()
+if the_state == GeneralCommanderStates.SUCCEEDED:
+    print('The multi move pose was successful')
+elif the_state in [GeneralCommanderStates.ABORTED, GeneralCommanderStates.ERROR]:
+    print(f'Error: {arm_commander.get_error_code()}')
 ```
 
 ## Defining the workspace, collision objects, and custom frames of reference

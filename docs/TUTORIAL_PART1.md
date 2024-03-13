@@ -172,7 +172,7 @@ for step in range(10):
 ```
 #### Rotate
 
-The function `rotate_to_orientation()` commands the end-effector to rotate according to the given Euler's angles (roll, pitch, and yaw). The following source code is from `simple_move_4.py`. 
+The function `rotate_to_orientation()` commands the end-effector to rotate according to the given Euler's angles (roll, pitch, and yaw). The following source code comes from `simple_move_4.py`. 
 ```
 arm_commander.rotate_to_orientation(roll = 3.14, pitch = 0.0, yaw = 0.2, wait=True)
 arm_commander.reset_state()
@@ -221,6 +221,29 @@ arm_commander.reset_state()
 rospy.loginfo(f'From start to target (cartesian is True)')
 arm_commander.move_to_position(x = 0.5, y = 0.0, z = 0.4, cartesian=True, wait=True)
 arm_commander.reset_state()  
+```
+
+### Move to Multi-Positions or Multi-Poses Commands
+
+The function `move_to_multi_poses()` commands the end-effector to move through several waypoint poses in a cartesian path. The waypoint poses are specified in a list, with each element can be a Pose, PoseStamped, 6-list (xyzrpy) or 7-list (xyzqqqq). The following source code comes from `multi_move_2.py`, which defines a list of 6 waypoints and commands the arm to move through these waypoints in one movement.
+```
+xyzrpy_list = [(0.6, 0.0, 0.4, 3.14, 0, 0), 
+            (0.6, 0.2, 0.5, 3.14, 0, 0), 
+            (0.6, 0.2, 0.6, 3.14, 0, 1.58), 
+            (0.6, 0.0, 0.7, 3.14, 0, 3.14), 
+            (0.6, -0.2, 0.6, 3.14, 0, 1.58), 
+            (0.6, -0.2, 0.5, 3.14, 0, 0), 
+            (0.6, 0.0, 0.4, 3.14, 0, 0)]
+# send a multi move command
+arm_commander.move_to_multi_poses(waypoints_list=xyzrpy_list, wait=True)
+```
+
+Similarly the function `move_to_multi_positions()` also commands the end-effector to move through several positions while keeping the rotation same. The xyz positions are specified as a list of 3-list [x, y, z] or 3-tuple (x, y, z). This function has an additional feature of using the current position (at the start) as the default value when any of the 3-list or 3-tuple contains a None value. The following source code comes from `multi_move_1.py`, which defines a list of 6 xyz positions. Note that the x component of all positions is None, and the missing value will assume the current x position.
+
+```
+xyz_list = [(None, 0.0, 0.4), (None, 0.2, 0.5), (None, 0.2, 0.6), (None, 0.0, 0.7), 
+            (None, -0.2, 0.6), (None, -0.2, 0.5), (None, 0.0, 0.4)]
+arm_commander.move_to_multi_positions(xyz_list=xyz_list, wait=True)
 ```
 
 ## Links

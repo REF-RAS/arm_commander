@@ -13,7 +13,7 @@ __version__ = '0.1.0'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, copy, threading, time, signal, math, traceback, timeit
+import sys, copy, threading, time, signal, math, traceback, timeit, numbers
 import rospy, tf
 from tf2_msgs.msg import TFMessage
 import moveit_commander
@@ -736,6 +736,65 @@ class GeneralCommander():
         finally:
             self.action_lock.release()
 
+
+    # command the robot arm to move the end effector to a series of positions defined in a list of 3-tuple (x, y, z)
+    # or 3-list [x, y, z]  in a cartesian motion manner and optionally in a particular frame of reference
+    def move_to_multi_positions(self, xyz_list, reference_frame:str=None, wait=True) -> Pose:
+        """Command the robot arm to move the end effector to a series of positions defined in a list of 3-tuple (x, y, z)
+        or 3-list [x, y, z] in a cartesian motion manner and optionally in a specified frame of reference. The xyz tuple or list
+        can contain a None value, which is default to the respective value of the current pose (at the start).
+
+        :param xyz_list: the waypoint and target positions, defaults to the current x position
+        :type xyz_list: list of 3-tuple or 3-list
+        :param reference_frame: frame of reference in which positions are specified, defaults to the world/default
+        :type reference_frame: str, optional
+        :param wait: the call is blocked until the command has been completed, defaults to True
+        :type wait: bool, optional
+        :return: The target pose in the given reference frame
+        :rtype: Pose
+        """
+
+        self.action_lock.acquire()
+        try:
+            if self.commander_state != GeneralCommanderStates.READY:
+                rospy.logerr('The commander (move_to_multi_positions): to move while not READY state -> ensure in the client the previous command is completed and commander reset')
+                return
+            if xyz_list is None or type(xyz_list) not in [list, tuple]:
+                rospy.logerr('The parameter xyz_list (move_to_multi_positions) is not a list or tuple')
+                return                 
+            reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
+            current_in_world_frame:PoseStamped = self.pose_in_frame(self.END_EFFECTOR_LINK, self.WORLD_REFERENCE_LINK)
+            waypoints_list = [current_in_world_frame.pose]
+            for xyz in xyz_list:
+                if xyz is None or type(xyz) not in [list, tuple] or len(xyz) != 3 \
+                        or any((n is not None) and (not isinstance(n, numbers.Number)) for n in xyz):
+                    rospy.logerr('The parameter xyz_list (move_to_multi_positions) contains waypoints that is not a list of 3 numbers')
+                    return                 
+                waypoint_pose:PoseStamped = self.pose_in_frame(self.END_EFFECTOR_LINK, reference_frame)
+                waypoint_pose.pose.position.x = xyz[0] if xyz[0] is not None else waypoint_pose.pose.position.x
+                waypoint_pose.pose.position.y = xyz[1] if xyz[1] is not None else waypoint_pose.pose.position.y
+                waypoint_pose.pose.position.z = xyz[2] if xyz[2] is not None else waypoint_pose.pose.position.z
+                waypoint_in_world_frame:PoseStamped = self.transform_pose(waypoint_pose, self.WORLD_REFERENCE_LINK)
+                waypoints_list.append(waypoint_in_world_frame.pose)
+
+            self.commander_state = GeneralCommanderStates.BUSY
+            (plan, fraction) = self.move_group.compute_cartesian_path(waypoints_list, self.CARTE_PLANNING_STEP_SIZE, 0.00) 
+            if fraction < 0.999:
+                rospy.logerr(f'The commander (move_to_multi_positions): planning failed due to collision ({fraction})')
+                self.commander_state, self.commander_state.message = GeneralCommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
+                return None 
+            self.move_group.execute(plan, wait=wait)
+            if not wait:
+                return waypoints_list
+            self.abort_move()
+            return waypoints_list 
+        except Exception as e:
+            rospy.logerr(f'The commander (move_to_multi_positions): {e} {traceback.format_exc()}')
+            self.commander_state = GeneralCommanderStates.ABORTED
+            self.commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'  
+        finally:
+            self.action_lock.release()
+
     # command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference
     def rotate_to_orientation(self, roll:float=None, pitch:float=None, yaw:float=None, reference_frame:str=None, wait=True):
         """Command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference
@@ -816,6 +875,67 @@ class GeneralCommander():
             self.commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'  
         finally:
             self.action_lock.release()
+
+    # command the robot arm to move the end effector to a series of (waypoint) poses optionally in a particular frame of reference   
+    # each waypoint pose may be a list of 6 or 7 numbers (xyz+4q) or (xyz+rpy) or Pose or PoseStamped. No None value is acceptable
+    def move_to_multi_poses(self, waypoints_list, reference_frame:str=None, wait=True) -> Pose:
+        """Command the robot arm to move the end effector to a series of (waypoint) poses optionally in a particular frame of reference 
+            the waypoint pose may be a list of 6 numbers (xyz+rpy), 7 numbers (xyz+4q), Pose or PoseStamped 
+            
+        :param waypoints_list: The list of waypoint pose
+        :type waypoints_list: a list of waypoint poses, each of which is a list of 6 floats (xyzrpy), 7 floats (xyzq), Pose, or PoseStamped
+        :param reference_frame: The frame of reference in which positions are specified, defaults to the world/default
+        :type reference_frame: str, optional
+        :param wait: The call is blocked until the command has been completed, defaults to True
+        :type wait: bool, optional
+        :return: The target pose in the given reference frame
+        :rtype: Pose
+        """
+        self.action_lock.acquire()
+        try:
+            if self.commander_state != GeneralCommanderStates.READY:
+                rospy.logerr(f'{__class__.__name__} (move_to_multi_poses): to move while not READY state -> ensure in the client the previous command is completed and commander reset')
+                return
+            if waypoints_list is None or type(waypoints_list) not in [list, tuple]:
+                rospy.logerr('The parameter waypoints_list (move_to_multi_poses) is not a list or tuple')
+                return                 
+            reference_frame = reference_frame if reference_frame is not None else self.WORLD_REFERENCE_LINK
+            current_in_world_frame:PoseStamped = self.pose_in_frame(self.END_EFFECTOR_LINK, self.WORLD_REFERENCE_LINK)            
+            processed_waypoints_list = [current_in_world_frame.pose]
+            for waypoint in waypoints_list:
+                if type(waypoint) in [list, tuple]: 
+                    waypoint = conversions.list_to_pose_stamped(waypoint, reference_frame)
+                if type(waypoint) == Pose:
+                    converted = PoseStamped()
+                    converted.pose = waypoint
+                    converted.header.frame_id = reference_frame
+                    waypoint = converted
+                if type(waypoint) != PoseStamped:
+                    rospy.logerr(f'The parameter waypoints_list (move_to_multi_poses) contains a waypoint of invalid format: {waypoint}')
+                    return  
+                waypoint_in_world_frame:PoseStamped = self.transform_pose(waypoint, self.WORLD_REFERENCE_LINK)
+                processed_waypoints_list.append(waypoint_in_world_frame.pose)
+
+            self.commander_state = GeneralCommanderStates.BUSY
+            (plan, fraction) = self.move_group.compute_cartesian_path(processed_waypoints_list, self.CARTE_PLANNING_STEP_SIZE, 0.00) 
+            if fraction < 0.999:
+                rospy.logerr(f'The commander (move_to_multi_poses): planning failed due to collision ({fraction})')
+                self.commander_state, self.commander_state.message = GeneralCommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
+                return None 
+            self.move_group.execute(plan, wait=wait)
+                                   
+            if not wait:
+                return processed_waypoints_list
+            self.abort_move()
+            return processed_waypoints_list
+
+        except Exception as e:
+            rospy.logerr(f'{__class__.__name__} (move_to_multi_poses): {e} {traceback.format_exc()}')
+            self.commander_state = GeneralCommanderStates.ABORTED
+            self.commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'  
+        finally:
+            self.action_lock.release()
+
 
     def servo_robot(self, twist: Twist, frame: str = "", time: float = 0) -> bool:
         """Attempt to servo the robot with provided Twist
