@@ -119,6 +119,10 @@ elif the_state in [GeneralCommanderStates.ABORTED, GeneralCommanderStates.ERROR]
     print(f'Error: {arm_commander.get_error_code()}')
 ```
 
+#### Reset to the Stow Pose
+
+The robot arm may get stuck in the examples if its initial pose is problematic for the planned movement. The program file `reset_robot.py` can be used to reset the robot arm back to the stow pose, which should be a reliable pose for starting any movement.
+
 #### The States of the General Arm Commander
 
 The following figure shows the states of the general arm commander and their significance to the client programs
@@ -138,7 +142,7 @@ while True:
     the_state = arm_commander.get_commander_state()
     if the_state not in [GeneralCommanderStates.BUSY]:
         break
-    rospy.sleep(0.1)
+    time.sleep(0.1)
 arm_commander.reset_state()
 ...
 ```
@@ -154,7 +158,7 @@ The following source code is from `simple_move_3.py`.
 ...
 arm_commander.move_to_position(x = -0.6, y = 0.2, wait=False)
 # abort the command after 3 seconds and wait for the abort to take effect
-rospy.sleep(3.0)
+time.sleep(3.0)
 arm_commander.abort_move(wait=True)
 arm_commander.reset_state()
 ...
@@ -213,12 +217,12 @@ types of path planning.
 
 ```
 # send a move command, z is defaulted to the current z value
-rospy.loginfo(f'Go back to start')
+logger.info(f'Go back to start')
 arm_commander.move_to_position(x = 0.0, y = -0.5, z = 0.2, wait=True)            
 arm_commander.reset_state()   
 
 # send a move command moveing back to the original position, constrained cartesian movement
-rospy.loginfo(f'From start to target (cartesian is True)')
+logger.info(f'From start to target (cartesian is True)')
 arm_commander.move_to_position(x = 0.5, y = 0.0, z = 0.4, cartesian=True, wait=True)
 arm_commander.reset_state()  
 ```

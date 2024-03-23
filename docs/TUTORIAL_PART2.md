@@ -17,7 +17,7 @@ try:
     for named_pose in self.demo_config['scene']['named_poses'].keys():
         arm_commander.add_named_pose(named_pose, self.demo_config['scene']['named_poses'][named_pose])
 except:
-    rospy.logerr(f'Error in loading demo config file {config_file}')
+    logger.error(f'Error in loading demo config file {config_file}')
     raise
 ```
 The yaml file has defined two named joint-space poses, namely, `stow` and `home`.
@@ -36,12 +36,12 @@ scene:
 arm_commander.wait_for_ready_to_move()
 
 # send a move command to 'stow'
-rospy.loginfo(f'Move_to_named_pose: stow')
+logger.info(f'Move_to_named_pose: stow')
 arm_commander.move_to_named_pose('stow', wait=True)
 arm_commander.reset_state()
 
 # send a move command to 'home'
-rospy.loginfo(f'Move_to_named_pose: home')
+logger.info(f'Move_to_named_pose: home')
 arm_commander.move_to_named_pose('home', wait=True)
 arm_commander.reset_state()
 ```

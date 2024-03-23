@@ -13,9 +13,8 @@ __version__ = '0.0.1'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, threading, signal
-import rospy
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
+import sys, signal
+from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
 from arm_commander.states import GeneralCommanderStates
 
 class ArmCommanderMultiMoveExample():
@@ -29,7 +28,7 @@ class ArmCommanderMultiMoveExample():
     """
 
     def __init__(self):
-        rospy.init_node('moveit_general_commander_node', anonymous=False)
+        # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
         # create the General Commander and wait for it being ready to service move commands
         arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
@@ -48,13 +47,13 @@ class ArmCommanderMultiMoveExample():
         arm_commander.move_to_multi_poses(waypoints_list=xyzrpy_list, wait=True)
         the_state = arm_commander.get_commander_state()
         if the_state == GeneralCommanderStates.SUCCEEDED:
-            print('The multi move pose was successful')
+            logger.info('The multi move pose was successful')
         elif the_state in [GeneralCommanderStates.ABORTED, GeneralCommanderStates.ERROR]:
-            print(f'Error: {arm_commander.get_error_code()}')
+            logger.info(f'Error: {arm_commander.get_error_code()}')
         arm_commander.reset_state()
                     
     def stop(self, *args, **kwargs):
-        rospy.loginfo(f'stop received')
+        logger.info(f'The stop signal received')
         self.arm_commander.abort_move()
         sys.exit(0)
 

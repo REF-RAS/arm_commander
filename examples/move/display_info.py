@@ -14,23 +14,19 @@ __version__ = '0.0.1'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, copy, threading, time, signal, math, traceback, os, yaml
-import rospy
-import moveit_commander
-import moveit_commander.conversions as conversions
-from geometry_msgs.msg import Pose, PoseStamped, Twist
+import sys, copy, threading, time, signal
 
 from arm_commander.moveit_tools import MOVEIT_ERROR_CODE_MAP, GOAL_STATUS_MAP
 from arm_commander.states import ControllerState, GeneralCommanderStates
 import arm_commander.moveit_tools as moveit_tools
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
+from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
 
 class ArmCommanderDisplayInfo():
 
     def __init__(self):
-        rospy.init_node('moveit_general_commander_node', anonymous=False)
+        # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
-        rospy.loginfo(f'Creating the General Commander')
+        logger.info(f'Creating the General Commander')
         self.arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
         arm_commander = self.arm_commander
         

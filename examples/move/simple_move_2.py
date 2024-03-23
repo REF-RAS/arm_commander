@@ -13,8 +13,7 @@ __version__ = '0.0.1'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, threading, signal
-import rospy
+import sys, signal, time
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
 from arm_commander.states import GeneralCommanderStates
 
@@ -25,7 +24,7 @@ class ArmCommanderMoveExample():
         - The function wait_for_busy_end() that has implemented the while loop  
     """
     def __init__(self):
-        rospy.init_node('moveit_general_commander_node', anonymous=False)
+        # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
         # create the General Commander and wait for it being ready to service move commands
         arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
@@ -41,7 +40,7 @@ class ArmCommanderMoveExample():
             the_state = arm_commander.get_commander_state()
             if the_state not in [GeneralCommanderStates.BUSY]:
                 break
-            rospy.sleep(0.1)
+            time.sleep(0.1)
         arm_commander.reset_state()
         # the while loop can be replaced by the following function call
         # arm_commander.wait_for_busy_end()

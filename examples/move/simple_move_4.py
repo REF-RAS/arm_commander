@@ -13,8 +13,7 @@ __version__ = '0.0.1'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, threading, signal
-import rospy
+import sys, signal
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
 
 class ArmCommanderMoveExample():
@@ -24,7 +23,7 @@ class ArmCommanderMoveExample():
         - The function move_displacement() to move a displacement with respect to the current position.
     """
     def __init__(self):
-        rospy.init_node('moveit_general_commander_node', anonymous=False)
+        # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
         
         # create the General Commander and wait for it being ready to service move commands

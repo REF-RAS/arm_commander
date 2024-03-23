@@ -13,7 +13,7 @@ __version__ = '0.1.0'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, copy, threading, time, signal, math, traceback, timeit, numbers
+import sys, copy, threading, time, signal, math, traceback, timeit, numbers, logging
 import rospy, tf
 from tf2_msgs.msg import TFMessage
 import moveit_commander
@@ -46,6 +46,15 @@ class GeneralCommander():
         :param world_link: [description], the link name used as the frame of reference in moveit 
         :type world_link: str, optional
         """
+        # check if a ROS node has been initialized 
+        node_uri = rospy.get_node_uri()
+        if node_uri is None:
+            rospy.init_node('arm_commander_node', anonymous=False)
+            rospy.logwarn(f'This application is not yet initialized as a ROS node.')
+            rospy.logwarn(f'For the proper operation, the arm commander has called rospy.init_node() on behalf of the application.')
+            rospy.logwarn(f'-> You may resolve this programming issue by adding the call at the start of the application.')
+            rospy.logwarn(f'    rospy.init_node(\'my_node\', anonymous=False)')
+        # initialize moveit commander
         moveit_commander.roscpp_initialize(sys.argv)
         # create lock for synchronization
         self.action_lock = threading.Lock()
@@ -65,11 +74,11 @@ class GeneralCommander():
         self.END_EFFECTOR_LINK = self.move_group.get_end_effector_link()
         if world_link is not None:
             self.WORLD_REFERENCE_LINK = world_link
-            rospy.loginfo(f'default reference frame changed from {self.move_group.get_planning_frame()} to {world_link}')
+            rospy.loginfo(f'The default reference frame changed from {self.move_group.get_planning_frame()} to {world_link}')
             self.move_group.set_pose_reference_frame(world_link)
         else:
             self.WORLD_REFERENCE_LINK = self.move_group.get_planning_frame()
-            rospy.loginfo(f'default reference frame is {self.WORLD_REFERENCE_LINK}')            
+            rospy.loginfo(f'The default reference frame is {self.WORLD_REFERENCE_LINK}')            
         # subscribe to /move_group/feedback
         self.moveit_result_sub = rospy.Subscriber('/move_group/result', MoveGroupActionResult, 
                                                     self._cb_move_group_result, queue_size=10)
@@ -83,6 +92,7 @@ class GeneralCommander():
         self.cached_result:MoveGroupActionResult = None
         # define the walls as the workspace limits
         self.wall_name_list = []
+
         # publisher for the planning scene
         self.scene_pub = rospy.Publisher('planning_scene', PlanningScene, queue_size=10)
         self.tf_pub = tf.TransformBroadcaster()
@@ -159,7 +169,7 @@ class GeneralCommander():
                 self.commander_state = GeneralCommanderStates.ERROR       
             self.commander_state.message = MOVEIT_ERROR_CODE_MAP[msg.result.error_code.val]
         else:
-            rospy.logerr(f'cb_handle_result_status: received goal result {msg} in a wrong state {self.commander_state.name}')
+            rospy.logerr(f'The arm commander (cb_handle_result_status) received goal result {msg} in a wrong state {self.commander_state.name}')
 
     # -- Function for querying the generalCommander for various information
 
@@ -936,6 +946,33 @@ class GeneralCommander():
         finally:
             self.action_lock.release()
 
+    # command the robot arm to move to a pose defined by joint values
+    def move_to_joint_pose(self, joint_pose:list, wait=True):
+        """ Command the robot arm to move to a named pose (joint-space) as defined in the scene model or
+        the commander through :method: 'move_to_joint_pose'.
+
+        :param joint_pose: The list of joint value
+        :type joint_pose: list
+        :param wait: The call is blocked until the command has been completed, defaults to True
+        :type wait: bool, optional
+        """
+        self.action_lock.acquire()
+        try:
+            if self.commander_state != GeneralCommanderStates.READY:
+                rospy.logerr('The commander (move_to_joint_pose): to move while not READY state -> ensure in the client the previous command is completed and commander reset')
+                return
+            self.move_group.set_joint_value_target(joint_pose)
+            self.commander_state = GeneralCommanderStates.BUSY        
+            success = self.move_group.go(wait=wait)
+            if not wait:
+                return         
+            self.abort_move()
+        except Exception as e:
+            rospy.logerr(f'The commander (move_to_joint_pose): {e} {traceback.format_exc()}')
+            self.commander_state = GeneralCommanderStates.ABORTED
+            self.commander_state.message = 'MOVE_FAILED_DUE_TO_EXCEPTION'  
+        finally:
+            self.action_lock.release()
 
     def servo_robot(self, twist: Twist, frame: str = "", time: float = 0) -> bool:
         """Attempt to servo the robot with provided Twist
@@ -1315,3 +1352,44 @@ class GeneralCommanderFactory():
         the_commander = GeneralCommander(moveit_group_name, world_link)
         GeneralCommanderFactory.object_store[moveit_group_name] = the_commander
         return the_commander
+    
+# ----------------------------------------------------------------------------------
+# the logging tool for use by the client program
+#
+    
+class CustomFormatter(logging.Formatter):
+    grey = '\x1b[38;20m'
+    cyan ='\x1b[36;20m'
+    yellow = '\x1b[33;20m'
+    red = '\x1b[31;20m'
+    bold_red = '\x1b[31;1m'
+    reset = '\x1b[0m'
+    # format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)'
+    format = '[%(levelname)s] [%(created)16f]: %(message)s'
+    FORMATS = {
+        logging.DEBUG: cyan + format + reset,
+        logging.INFO: grey + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+    def format(self, record):
+        time_format = "%H:%M:%S %f"
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt, datefmt=time_format)
+        return formatter.format(record)
+    def formatException(self, exc_info):
+        result = super().formatException(exc_info)
+        return repr(result)
+
+def init_logger():
+    logger = logging.getLogger('main')
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    if not logger.handlers:
+        ch = logging.StreamHandler()
+        ch.setFormatter(CustomFormatter())
+        logger.addHandler(ch)
+    return logger
+
+logger = init_logger()

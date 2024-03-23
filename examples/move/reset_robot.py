@@ -17,13 +17,8 @@ import sys, signal
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
 from arm_commander.states import GeneralCommanderStates
 
-class ArmCommanderMoveExample():
-    """ This example demonstrates the following:
-        - Create a general commander (arm_commander) that uses the move_group named "panda_arm"
-        - Spin the general commander in a new thread and wait for the end of the internal setup
-        - The function move_to_position to move a robot_link (the end-effector) to a particular x, y, z
-        - The default value of the current component value if one or two of the x, y, z components is not given 
-        - The function reset_state() for clearing the state of the general commander and get ready for the next move command
+class ResetRobotExample():
+    """ This example demonstrates moving the robot arm back to a proper state
     """
 
     def __init__(self):
@@ -34,16 +29,10 @@ class ArmCommanderMoveExample():
         arm_commander.spin(spin_in_thread=True)
         arm_commander.wait_for_ready_to_move()
         self.arm_commander = arm_commander
-        # send a move command
-        arm_commander.move_to_position(x = 0.6, y = 0.0, z = 0.4, wait=True)
-        arm_commander.reset_state()
-        # send a move command
-        arm_commander.move_to_position(x = 0.4, y = 0.2, wait=True)
-        the_state = arm_commander.get_commander_state()
-        if the_state == GeneralCommanderStates.SUCCEEDED:
-            logger.info('The move was successful')
-        elif the_state in [GeneralCommanderStates.ABORTED, GeneralCommanderStates.ERROR]:
-            logger.error(f'Error: {arm_commander.get_error_code()}')
+        arm_commander.reset_world()
+        # send a move command to move to a joint pose
+        arm_commander.move_to_joint_pose([0.00, -1.243, 0.00, -2.949, 0.00, 1.704, 0.785], wait=True)
+        logger.loginfo(f'The robot arm has returned to the stow pose')
         arm_commander.reset_state()
                     
     def stop(self, *args, **kwargs):
@@ -52,4 +41,4 @@ class ArmCommanderMoveExample():
         sys.exit(0)
 
 if __name__=='__main__':
-    ArmCommanderMoveExample()
+    ResetRobotExample()
