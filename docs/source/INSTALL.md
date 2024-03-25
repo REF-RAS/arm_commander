@@ -1,10 +1,16 @@
-# Installation Guide for The Arm Commander Package
+# Installation Guide
 ![QUT REF Collection](https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github) [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
+The docker based installation should be the easier than the non-docker counterpart, especially if you already have docker desktop already installed on your computer.
+
+## Software Requirements
+- [Moveit 1](https://ros-planning.github.io/moveit_tutorials/) 
+- [ROS 1 Noetic](http://wiki.ros.org/noetic)
+- Python 3.8 or above
 
 ## Installation (Docker)
 
-The Dockerfile for building the environment is in the root directory of this repository. It has been tested in Ubuntu 20.04. Download the file to your local disk and change directory to where the file is located. 
+The [Dockerfile](../../Dockerfile) for building the environment is in the root directory of this repository. It has been tested with Docker 25.0.3 and Ubuntu 20.04. Download the file to your local disk and change directory to where the file is located. 
 ```
 docker build --tag arm_commander - < Dockerfile
 ```
@@ -34,11 +40,9 @@ source devel/setup.bash
 rosrun arm_commander commander_demo.py
 ```
 
-
-
 ## Installation (Non-Docker)
 
-#### Install Moveit 
+### Install Moveit 
 
 The non-docker method assumes the starting point of having ROS Noetic installed. 
 
@@ -47,7 +51,7 @@ sudo apt-get update
 sudo apt-get install ros-noetic-moveit -y
 ```
 
-#### Install the Arm Commander
+### Install the Arm Commander
 
 Create a catkin workspace.
 ```
@@ -60,7 +64,7 @@ Clone this repository to the `src` directory.
 git clone git@github.com:REF-RAS/arm_commander.git
 ```
 
-#### Install a Robot Arm Model
+### Install a Robot Arm Model
 
 The demo program and the tutorial programs are designed to work with the dimension of a Panda.
 
@@ -69,15 +73,14 @@ cd ~/arm_commander_ws/src
 git clone https://github.com/ros-planning/panda_moveit_config.git -b noetic-devel 
 ```
 
-#### Build the Packages
+### Build the Packages
 
 ```
 rosdep install --from-paths src --ignore-src -r -y --rosdistro noetic
 source /opt/ros/noetic/setup.bash
 catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python3
 ```
-
-## Demonstration
+## The Demonstration Program
 
 The demo program is located at `examples/commander_demo.py`. To look at the demo, fire up the Panda model on RViz.
 ```
@@ -92,18 +95,17 @@ source devel/setup.bash
 
 [![Watch the demo](https://img.youtube.com/vi/YleDRs649VA/0.jpg)](https://www.youtube.com/watch?v=YleDRs649VA)
 
+## Tutorial Programs
 
-## Links 
-
-- [README: The Arm Commander Package](../README.md)
-
-
-## Authors
-
-Dr Andrew Lui, Senior Research Engineer <br />
-Dr Dasun Gunasinghe, Senior Research Engineer <br />
-Robotics and Autonomous Systems, Research Engineering Facility <br />
-Research Infrastructure <br />
-Queensland University of Technology <br />
+The tutorial programs are stored under the `examples` folder. They are divided into 6 folder.
+```bash
+├── examples
+|  ├── collision    examples on collision avoidance and collision objects
+|  ├── framenove    examples on custom frames and movememnt with reference to custom frames
+|  ├── config       the config files for running the commander_demo.py on different robot arm models
+|  ├── move         examples on basic movement
+|  ├── multimove    examples on multi-waypoint movement
+|  ├── named_poses  examples on movement to named poses and the loading of named poses specification
+```
 
 Latest update: Feb 2024

@@ -1,4 +1,4 @@
-# Tutorial: Programming with the Arm Commander Package (Part 2)
+# Programming Tutorial Part 2
 
 Part 2 of the tutorial covers the the use of logical named poses, reference frames, symmetry of poses, and collision avoidance with arm commander package.
 
@@ -74,7 +74,7 @@ arm_commander.reset_state()
 arm_commander.move_to_position(x = 0.2, y = 0.1, z = 0.15, wait=True, reference_frame='area_1')
 arm_commander.reset_state()  
 ```
-![Animation](assets/ArmCommander-FrameMove1.gif)
+![Animation](../assets/ArmCommander-FrameMove1.gif)
 
 ### Exploiting Symmetry in Movement with Multiple Reference Frames
 
@@ -105,7 +105,7 @@ arm_commander.reset_state()
 arm_commander.move_to_position(x = -0.2, y = -0.1, z = 0.15, wait=True, reference_frame='area_2')
 arm_commander.reset_state()   
 ```
-![Animation](assets/ArmCommander-FrameMove2.gif)
+![Animation](../assets/ArmCommander-FrameMove2.gif)
 
 ## A Summary of Move Functions
 
@@ -145,7 +145,7 @@ arm_commander.reset_state()
 Avoidance of collision is supported by path planning of the underlying robot manipulation platform such as Moveit. 
 The program file `/collision/avoid_object.py` illustrates how the end-effector of the robot arm moves to the side and the top of a collision object.
 
-![Animation](assets/ArmCommander-AvoidObject1.gif)
+![Animation](../assets/ArmCommander-AvoidObject1.gif)
 
 ## Constraints
 
@@ -165,7 +165,7 @@ xyzrpy = [0.4, 0.0, 0.6, 3.14, 0.0, 0.6]
 arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
 arm_commander.reset_state()   
 ```
-![Animation](assets/ArmCommander-AvoidObject2.gif)
+![Animation](../assets/ArmCommander-AvoidObject2.gif)
 
 Another `OrientationConstraint` has been commented out, try using it to replace the current one and observe the difference.
 
@@ -196,14 +196,13 @@ xyzrpy = [0.4, -0.15, 0.4, 3.14, 0.0, 0.6]
 arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
 arm_commander.reset_state() 
 ```
-![Animation](assets/ArmCommander-AvoidObject3.gif)
+![Animation](../assets/ArmCommander-AvoidObject3.gif)
 
-## Links
+### References
 
-- [Overview: The Arm Commander Package](../README.md)
-- [Tutorial: Programming with the Arm Commander Package (Part 1)](TUTORIAL_PART1.md)
+- [Programming Tutorial Part 1](TUTORIAL_PART1.md)
 
-## Author
+### Author
 
 Dr Andrew Lui, Senior Research Engineer <br />
 Robotics and Autonomous Systems, Research Engineering Facility <br />

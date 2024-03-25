@@ -1,4 +1,5 @@
-# The Arm Commander: API Overview
+# A Summary of the API
+
 ![QUT REF Collection](https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github) [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 In addition to the functions for initialization and system settings, the application programming interface (API) can be divided into three groups of functions:
@@ -6,7 +7,7 @@ In addition to the functions for initialization and system settings, the applica
 - Defining the workspace, collision objects, and custom frames of reference
 - Querying the status of the robot arm and the system
 
-This page provides an overview of the API. Refer to the [Full API Documentation](https://REF-RAS.github.io/arm_commander/build/html/index.html)  for the details.
+This page provides a summary of the API. Refer to the [Full API Reference](arm_commander_modules.rst) for details.
 
 ## Initialization and System Settings
 
@@ -133,7 +134,7 @@ while True:
         break
     rospy.sleep(0.1)
 arm_commander.reset_state()
-
+```
 ### Example: Issuing an Multi-Waypoints Move Command
 
 The following shows an example of issuing a move command comprising multiple waypoints.
@@ -212,13 +213,7 @@ The `moveit_tools` module offers helper functions for creating constraint object
 | same_rpy_with_tolerence | | Compare two rotation values |
 | in_region | | Returns true if (x,y) is within a 2D bounding box|
 
-
-## Links
-
-- [Overview: The Arm Commander Package](../README.md)
-
-
-## Author
+### Author
 
 Dr Andrew Lui, Senior Research Engineer <br />
 Robotics and Autonomous Systems, Research Engineering Facility <br />

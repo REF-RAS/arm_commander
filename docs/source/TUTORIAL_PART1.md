@@ -1,21 +1,23 @@
-# Tutorial: Programming with the Arm Commander Package (Part 1)
+# Programming Tutorial Part 1
 
-Part 1 of the tutorial covers the basics of programming with arm commander package, including the first programs covering the essentials of the package and the primitive move commands.
+Part 1 of the tutorial covers the basics of programming with the arm commander package, including the first programs covering the essentials of the package and the primitive move commands.
 
-## Requirements
-- [Moveit 1](https://ros-planning.github.io/moveit_tutorials/) 
-- ROS 1
-- Python 3.8 or above
+Follow the [Installation Guide](INSTALL.md) to get the arm commmander ready on your computer.
 
-## Example Programs
+## Structure of the Example Program Folder
 
-Example programs are provided for illustrating how to use the **general arm commander** package in programming robot arm manipulations. They are can found under the directory `[Package Home]/examples`. The programs are divided into four sub-directories:
-- `move`: examples on basic move commands and asynchronous programming support
-- `framemove`: examples on move commands with custom reference frames
-- `named_poses`: examples on move commands to named joint-space poses
-- `collision`: examples on collision avoidance, collision objects, and path constraints.
+Example programs are provided for illustrating how to use the **general arm commander** package in programming robot arm manipulations. They are can found under the directory `examples`. The programs are divided into sub-directories:
+```bash
+├── examples
+|  ├── collision    examples on collision avoidance, collision objects and path constraints
+|  ├── framenove    examples on custom frames and movememnt with reference to custom frames
+|  ├── config       the config files for running the commander_demo.py on different robot arm models
+|  ├── move         examples on basic movement
+|  ├── multimove    examples on multi-waypoint movement
+|  ├── named_poses  examples on movement to named poses and the loading of named poses specification
+```
 
-## The Basics
+## Programming Essentials
 
 The essential Python modules are found in the following three files.
 - `commander_moveit.py`: defines main classes including the `GeneralCommander` and the factory class `GeneralCommanderFactory`.
@@ -91,27 +93,17 @@ class ArmCommanderMoveExample():
 
 #### Move to a XYZ Position
 
-The function `move_to_position()` commands (the end-effector of) the arm to move to a position specified in XYZ. 
-- The XYZ are specified as three component parameters.
-- Their parameter values are defaulted to the current XYZ. In the second function call, the target of the move command is 
-x (0.4), y (0.2) and the z will remain unchanged.
-- The parameter `wait` specifies whether the move command is synchronous (True) or asynchronous (False). 
-- A synchronous command call is blocking. The execution returns only after the command execution is completed.
-- The function `reset_state()` must be called before issuing another move command to the general arm commander.
-
+Make a call to one of the move functions of the arm commander to move the robot arm's end effector to a position. For example, the following call to `move_to_position` moves the end effector to the location (x, y, z) = (0.0, 0.0, 0.4).
 ```
 # send a move command
 arm_commander.move_to_position(x = 0.6, y = 0.0, z = 0.4, wait=True)
-arm_commander.reset_state()
-# send a move command
-arm_commander.move_to_position(x = 0.4, y = 0.2, wait=True)
 arm_commander.reset_state()
 ```
 The general arm commander uses states to regulate the interaction with the client program. For example, the state notifies the client if the 
 command was successful or failed.
 ```
 ...
-arm_commander.move_to_position(x = 0.4, y = 0.2, wait=True)
+arm_commander.move_to_position(x = 0.6, y = 0.0, z = 0.4, wait=True)
 the_state = arm_commander.get_commander_state()
 if the_state == GeneralCommanderStates.SUCCEEDED:
     print('The move was successful')
@@ -127,7 +119,7 @@ The robot arm may get stuck in the examples if its initial pose is problematic f
 
 The following figure shows the states of the general arm commander and their significance to the client programs
 
-![General Commander States](assets/GeneralCommanderStates.png)
+![General Commander States](../assets/GeneralCommanderStates.png)
 
 ### Asynchronous Commands
 
@@ -148,7 +140,7 @@ arm_commander.reset_state()
 ```
 Alternatively, use the function `wait_for_busy_end()` for a blocking wait of the end of the `BUSY` state.
 
-#### Abort the Current Move Commands
+### Abort the Current Move Commands
 
 The function `abort_move()` terminates the current move command. If the parameter `wait` is True, the function does not return until the abort has been
 handled by the underlying platform completely and the state will become `GeneralCommanderStates.ABORTED`.
@@ -164,9 +156,29 @@ arm_commander.reset_state()
 ...
 ```
 
-### Other Move to Position and Orientation Commands
+## Move Commands to a Position or Orientation
 
-#### Move using a displacement
+### Move to a position
+
+The function `move_to_position()` commands (the end-effector of) the arm to move to a position specified in XYZ. 
+- The XYZ are specified as three component parameters.
+- Their parameter values are defaulted to the current XYZ. In the second function call, the target of the move command is 
+x (0.4), y (0.2) and the z will remain unchanged.
+- The parameter `wait` specifies whether the move command is synchronous (True) or asynchronous (False). 
+- A synchronous command call is blocking. The execution returns only after the command execution is completed.
+- The function `reset_state()` must be called before issuing another move command to the general arm commander.
+
+```
+# send a move command
+arm_commander.move_to_position(x = 0.6, y = 0.0, z = 0.4, wait=True)
+arm_commander.reset_state()
+# send a move command
+arm_commander.move_to_position(x = 0.4, y = 0.2, wait=True)
+arm_commander.reset_state()
+```
+
+
+### Move using a displacement
 
 The function `move_displacement()` commands the robot arm to move based on a displacement from the current position. The following source code is from `simple_move_4.py`.  The end-effector will move 10 cm ten times.
 ```
@@ -174,7 +186,7 @@ for step in range(10):
     arm_commander.move_displacement(dy = 0.1, wait=True)
     arm_commander.reset_state()
 ```
-#### Rotate
+### Rotate
 
 The function `rotate_to_orientation()` commands the end-effector to rotate according to the given Euler's angles (roll, pitch, and yaw). The following source code comes from `simple_move_4.py`. 
 ```
@@ -183,7 +195,7 @@ arm_commander.reset_state()
 ```
 The default values of the three component parameters are the current values.
 
-#### Move to Both Position and Orientation
+### Move to Both Position and Orientation
 
 The function `move_pose()` commands the end-effector to move to a target pose, which can be of type `Pose` or `PoseStamped`. 
 ```
@@ -207,9 +219,9 @@ arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
 arm_commander.reset_state() 
 ```
 
-![Animation of the Movement](assets/ArmCommander-SimpleMove5.gif)
+![Animation of the Movement](../assets/ArmCommander-SimpleMove5.gif)
 
-#### Cartesian Movement
+### Cartesian Movement
 
 The function `move_position()` supports both cartesian path planning (with collision avoidance) and algorithmic path planning (based on a path planner). 
 Setting the parameter `cartesian` to True turns on cartesian path planning.  The following source code, found in`simple_move_5.py` compares the two
@@ -250,13 +262,11 @@ xyz_list = [(None, 0.0, 0.4), (None, 0.2, 0.5), (None, 0.2, 0.6), (None, 0.0, 0.
 arm_commander.move_to_multi_positions(xyz_list=xyz_list, wait=True)
 ```
 
-## Links
+### References
 
-- [Overview: The Arm Commander Package](../README.md)
-- [Tutorial: Programming with the Arm Commander Package (Part 2)](TUTORIAL_PART2.md)
+- [Programming Tutorial Part 2)](TUTORIAL_PART2.md)
 
-
-## Author
+### Author
 
 Dr Andrew Lui, Senior Research Engineer <br />
 Robotics and Autonomous Systems, Research Engineering Facility <br />

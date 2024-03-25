@@ -1,18 +1,21 @@
 The Arm Commander
 =================
 
-This page contains API references of the arm commander. 
-
-Visit the `Overview of Arm Commander <https://github.com/REF-RAS/arm_commander>`_ 
-at the Github Repo for programming resources such as the overview of the API,
-recommended design patterns, and programming tutorials.
-
+.. include:: OVERVIEW.md
+   :parser: myst_parser.sphinx_
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   OVERVIEW.md
+   INSTALL.md
+   TUTORIAL_PART1.md
+   TUTORIAL_PART2.md
+   DESIGN.md
+   API_SUMMARY.md
    arm_commander_modules
+   AKNOWLEDGEMENT.md
 
 Indices and tables
 ==================

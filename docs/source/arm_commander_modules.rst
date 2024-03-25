@@ -1,4 +1,4 @@
-The Arm Commander: API Documentation
+The Arm Commander API References
 ===============================================
 
 arm\_commander.commander\_moveit module
@@ -6,7 +6,6 @@ arm\_commander.commander\_moveit module
 
 .. automodule:: arm_commander.commander_moveit
     :members:
-    :undoc-members:
     :show-inheritance:
 
 arm\_commander.moveit\_tools module
@@ -25,11 +24,3 @@ arm\_commander.states module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: arm_commander
-    :members:
-    :undoc-members:
-    :show-inheritance:

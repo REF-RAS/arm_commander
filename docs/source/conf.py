@@ -44,7 +44,10 @@ extensions = [
     'myst_parser',
 ]
 
-myst_all_links_external = True
+myst_all_links_external = False
+
+autodoc_mock_imports = ['rospy', 'moveit_commander', 'geometry_msgs', 'tf', 'tf2_msgs', 'moveit_msgs',
+                        'shape_msgs', 'actionlib_msgs', 'controller_manager_msgs']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

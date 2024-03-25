@@ -1358,6 +1358,9 @@ class GeneralCommanderFactory():
 #
     
 class CustomFormatter(logging.Formatter):
+    """
+    :meta private:
+    """
     grey = '\x1b[38;20m'
     cyan ='\x1b[36;20m'
     yellow = '\x1b[33;20m'

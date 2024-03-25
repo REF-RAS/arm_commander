@@ -1,95 +1,45 @@
 # The Arm Commander
 ![QUT REF Collection](https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github) [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-<!--
-Replace REPO_USER, & REPO_NAME in the lines below to get more auto-generated badges
-![Primary language](https://img.shields.io/github/languages/top/REPO_USER/REPO_NAME)
-[![License](https://img.shields.io/github/license/REPO_USER/REPO_NAME)](./BSD.txt)
--->
+**Robotics and Autonomous Systems Group, Research Engineering Facility, Research Infrastructure**
+**Queensland University of Technology**
 
-The **Arm Commander** is a Python programming module for accelerating the development of robot arm manipulation applications. It provides programming access to general executing and tracking services for robot arm and end-effector manipulation. Application developers are spared from implementing the same services and primed for creating higher-level manipulation sequences. The programming effort can be significanly reduced.
+## Introduction
 
-The arm commander defines a model programming interface for general robot arm manipulation and comprises the components for mapping move commands between the application and the underlying robotic manipulation platforms or arm movement planners such as [Moveit](https://ros-planning.github.io/moveit_tutorials/). It is expected that applications based on the **Arm Commander** can switch between Moveit 1, Moveit 2, and other platforms almost seamlessly. The current version works with [Moveit 1](https://ros-planning.github.io/moveit_tutorials/) and ROS Noetic. A long-term objective is to attain manipulation platform angostic and robot model agnostic support of application development.
+The **Arm Commander** is a Python programming module for accelerating the development of robot arm manipulation applications.  
 
 ![Demo Animation](docs/assets/DemoArmCommander.gif)
 
-The arm commander is a critical component of the **Task Trees**, which is a SDK for building reusable and resilient behaviour tree-based robotic manipulation applications. Refer to the [Task Trees Github Repo](https://github.com/RAS-REF/task_trees) for the details.
+Use the [Documentation Entry Point](http://REF-RAS.github.io/arm_commander) to bring you to following parts of the documentation of the arm commander.
+- Overview of the Arm Commander
+- Installation Guide
+- Programming Tutorial Part 1
+- Programming Tutorial Part 2
+- Application Design Gallery
+- Summary of the API
 
-The following figure the relation between the application, the arm commander, and the underlying robotic manipulation platform.
+## Robot Arm Programming with the Arm Commander
 
-![Arm Commander Based Development](docs/assets/ArmCommander2.png)
+The arm commander presents a programming interface dedicated to robot arm manipulation and encapsulates useful but tedious programming components such as ROS and arm movement planning.  The arm commander can support the development of applications using or not using ROS. The following example uses the arm commander API to move the end-effector of the robot arm `panda_arm` to the position (0.6, 0.0, 0.4), and then move it to another position (0.4, 0.2, 0.4)
 
-## Application Progamming with the Arm Commander
-
-Application development can be made significantly simpler with the arm commander, which has implemented several processes essential in the interaction with the underlying robotic manipulation platform (i.e. Moveit). 
-
-![Processes for Handling Move Commands](docs/assets/ArmCommander3.png)
-
-#### Handling and Tracking Move Commands
-
-Applications can use the support of the arm commander to issue, track and abort move commands, and can alternatively delegate the tracking to the arm commander. The arm commander supports synchronoization and error recovery.
-
-#### Resolving Different Forms of Target Pose
-
-Applications can specify the target pose in different forms. generally, the target pose can be in the form of a `Pose` object, a `PoseStamped` object, a list of 6 numbers representing (xyzrpy) or 7 numbers representing (xyzqqqq). Its components, the `position` and the `rotation`, can be specified individually while the other component is fixed at the current value. In addition, each of the xyz components of the `position` or the rpy components of the `rotation` can also be specified individually. For example, the end-effector can be moved to a new position in the x axis, while the y axis, z axis, and the rotation will remain the same. The **Arm Commander** resolves and re-packages the move commands appropriately for the underlying Moveit 1. 
-
-#### Supporting the Use of Workspace and Constraints
-
-Applications can define the workspace to confine the end-effector within a 3D bounding box. They can also exploit helper functions to create various path constraints to regulate the joint status and the end-effector's pose during the execution of a move command.
-
-#### Enabling Custom Reference Frames in Move Commands
-
-Applications can define custom reference frames for specifying move commands relative to different local contexts.
-
-### Design Patterns of Arm Commander-based Robotic Manipulation Applications 
-
-The [Application Design Gallery](docs/DESIGN.md) page presents several probable designs of robotic manipulation applications based on the arm commander and a robotic manipulation platform. 
-
-### Application Programming Interface (API)
-
-The application programming interface (API) of the **Arm Commander** can be divided into three groups of functions:
-- Issuing and tracking move commands 
-- Defining the workspace, collision objects, and custom frames of reference
-- Querying the status of the robot arm and the system
-
-![Arm Commander Programming Interface](docs/assets/ArmCommander1.png)
-
-The [API Overview](docs/API_OVERVIEW.md) page has organized the available functions for browsing. The [Full API Documentation](https://REF-RAS.github.io/arm_commander/build/html/index.html) is also available for reference.
-
-## Installation
-
-The [Installation Guide](docs/INSTALL.md) describes a docker-based and a non-docker based procedures.
-
-## The Demonstration Application
-
-The demo application is located at `examples/commander_demo.py`. The demo requires a running Panda model on RViz.
 ```
-roslaunch panda_moveit_config demo.launch
-```
-Then execute the demo application.
-```
-cd ~/arm_commander_ws
-source devel/setup.bash
-/usr/bin/python3 ./src/arm_commander/arm_commander/commander_demo.py
-```
-The demo program is registered with the catkin workspace. The last command may be replaced by the following.
-```
-rosrun arm_commander commander_demo.py
-```
+from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
 
-## Programming Tutorials
+class ArmCommanderMoveExample():
+    def __init__(self):
+        # create the General Commander and wait for it being ready to service move commands
+        arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander.spin(spin_in_thread=True)
+        arm_commander.wait_for_ready_to_move()
+        # send two move commands one after another
+        arm_commander.move_to_position(x = 0.6, y = 0.0, z = 0.4, wait=True)
+        arm_commander.reset_state()
+        arm_commander.move_to_position(x = 0.4, y = 0.2, wait=True)
+        arm_commander.reset_state()
+```
+![Demo Animation](docs/assets/ArmCommander-SimpleMove1.gif)
 
-A set of tutorials and example programs are provided in this package.
-
-- [Tutorial: Programming with the Arm Commander Package (Part 1)](docs/TUTORIAL_PART1.md)
-- [Tutorial: Programming with the Arm Commander Package (Part 2)](docs/TUTORIAL_PART2.md)
-
-## Links
-- [Application Design Gallery](docs/DESIGN.md) 
-- [API Overview](docs/API_OVERVIEW.md)
-- [Installation Guide](docs/INSTALL.md)
-
-## Authors
+## Developers
 
 Dr Andrew Lui, Senior Research Engineer <br />
 Dr Dasun Gunasinghe, Senior Research Engineer <br />
