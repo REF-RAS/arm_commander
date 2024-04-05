@@ -15,7 +15,8 @@ __status__ = 'Development'
 
 import sys, signal
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
-import arm_commander.moveit_tools as moveit_tools
+import arm_commander.tools.moveit_tools as moveit_tools
+import arm_commander.tools.pose_tools as pose_tools
 
 class ArmCommanderCollisionAvoidExample():
     """ This example demonstrates the following:
@@ -35,7 +36,7 @@ class ArmCommanderCollisionAvoidExample():
         
         # move to a starting position
         xyzrpy = [0.4, -0.15, 0.4, 3.14, 0.0, 0.6]
-        arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+        arm_commander.move_to_pose(xyzrpy, wait=True)
         arm_commander.reset_state() 
         
         # add a collision object
@@ -48,7 +49,7 @@ class ArmCommanderCollisionAvoidExample():
         
         # move to the opposite side of the object
         xyzrpy = [0.4, 0.15, 0.4, 3.14, 0.0, 0.6]
-        arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+        arm_commander.move_to_pose(xyzrpy, wait=True)
         arm_commander.reset_state() 
         
         # clear the current positional path constraint and add another positional path constraint
@@ -60,7 +61,7 @@ class ArmCommanderCollisionAvoidExample():
 
         # move to above the object
         xyzrpy = [0.4, -0.15, 0.4, 3.14, 0.0, 0.6]
-        arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+        arm_commander.move_to_pose(xyzrpy, wait=True)
         arm_commander.reset_state()    
         
         arm_commander.clear_path_constraints()     

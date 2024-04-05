@@ -15,7 +15,7 @@ __status__ = 'Development'
 
 import sys, threading, signal
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
-import arm_commander.moveit_tools as moveit_tools
+import arm_commander.tools.pose_tools as pose_tools
 
 class ArmCommanderMoveExample():
     def __init__(self):
@@ -29,13 +29,13 @@ class ArmCommanderMoveExample():
         
         # send a move command specified in Pose
         xyzrpy = [0.2, 0.0, 0.5, 3.14, 0.0, 0.6]
-        pose = moveit_tools.create_pose(xyzrpy)
+        pose = pose_tools.list_to_pose(xyzrpy)
         arm_commander.move_to_pose(pose, wait=True)
         arm_commander.reset_state()
 
         # send a move command specified in PoseStamped
         xyzrpy = [0.5, 0.1, 0.4, 3.14, 0.0, -0.6]
-        pose_stamped = moveit_tools.create_pose_stamped(xyzrpy, arm_commander.get_world_reference_frame())        
+        pose_stamped = pose_tools.list_to_pose_stamped(xyzrpy, arm_commander.get_world_reference_frame())        
         arm_commander.move_to_pose(pose_stamped, wait=True)
         arm_commander.reset_state()
                 

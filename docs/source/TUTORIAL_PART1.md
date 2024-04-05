@@ -210,12 +210,19 @@ pose.orientation.w = 1.0
 arm_commander.move_to_pose(pose, wait=True)
 arm_commander.reset_state()
 ```
-The helper function `create_pose()` from the module `moveit_tools` offers conversion of a list of `xyzrpy` or `xyzqqqq` into `Pose` or `PoseStamped`.
+The helper function `list_to_pose()` from the module `pose_tools` offers conversion of a list of `xyzrpy` or `xyzqqqq` into `Pose` or `PoseStamped`.
 The following source code is from `frame_move_1.py`.
 
 ```
 xyzrpy = [0.4, 0.0, 0.4, 3.14, 0.0, 0.6]
-arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+arm_commander.move_to_pose(pose_tools.list_to_pose(xyzrpy), wait=True)
+arm_commander.reset_state() 
+```
+The function `move_to_pose` can accept different pose formats, including list of `xyzrpy` or `xyzqqqq` and Pose and PoseStamped. The following passes the list of `xyzrpy` to the function without
+the conversion.
+```
+xyzrpy = [0.4, 0.0, 0.4, 3.14, 0.0, 0.6]
+arm_commander.move_to_pose(xyzrpy, wait=True)
 arm_commander.reset_state() 
 ```
 

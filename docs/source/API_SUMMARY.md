@@ -196,13 +196,18 @@ The `moveit_tools` module offers helper functions for creating constraint object
 | create_position_constraint | | Constraint the position of the end-effector in the world frame |
 | create_position_constraint_from_bbox | Constraint the position of the end-effector in the world frame using a 3D bounding box|
 
+## The Pose Tools
+
 ### Pose Conversion
 
 | Functions | Parameters | Remarks |
 | -------- | ---------- | ------- |
-| create_pose | a list (xyzrpy) | Returns Pose  |
-| create_pose_stamped | a list (xyzrpy) and the target frame | Returns PoseStamped  |
-| pose_stamped_to_xyzrpy | The pose | Returns a list (xyzrpy) |
+| list_to_pose | A list (xyzrpy or xyzqqqq) | Returns Pose  |
+| list_to_pose_stamped | A list (xyzrpy or xyzqqqq) and the target frame | Returns PoseStamped  |
+| pose_to_xyzq | The pose | Returns a list (xyzqqqq) |
+| pose_to_xyzrpy | The pose | Returns a list (xyzrpy) |
+| list_to_xyzq | A list (xyzrpy or xyzqqqq) | Returns a list (xyzqqqq) |
+| list_to_xyzrpy | A list (xyzrpy or xyzqqqq) | Returns a list (xyzrpy) |
 
 ### Pose Comparison
 
@@ -210,7 +215,8 @@ The `moveit_tools` module offers helper functions for creating constraint object
 | -------- | ---------- | ------- |
 | same_pose_with_tolerence | | Compare two poses |
 | same_joint_values_with_tolerence | | Compare two poses in the joint-space |
-| same_rpy_with_tolerence | | Compare two rotation values |
+| same_rpy_with_tolerence | | Compare two rotation |
+| same_xyz_with_tolerence | | Compare two position |
 | in_region | | Returns true if (x,y) is within a 2D bounding box|
 
 ### Author

@@ -15,7 +15,6 @@ __status__ = 'Development'
 
 import sys, signal
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
-from arm_commander.states import GeneralCommanderStates
 
 class ResetRobotExample():
     """ This example demonstrates moving the robot arm back to a proper state

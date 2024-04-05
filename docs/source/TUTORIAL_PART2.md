@@ -157,13 +157,13 @@ arm_commander.add_path_constraints(moveit_tools.create_path_orientation_constrai
 
 # move to the opposite side of the object
 xyzrpy = [0.4, 0.15, 0.4, 3.14, 0.0, 0.6]
-arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+arm_commander.move_to_pose(xyzrpy, wait=True)
 arm_commander.reset_state()         
 
 # move to the top of the object
 xyzrpy = [0.4, 0.0, 0.6, 3.14, 0.0, 0.6]
-arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
-arm_commander.reset_state()   
+arm_commander.move_to_pose(xyzrpy, wait=True)
+arm_commander.reset_state()    
 ```
 ![Animation](../assets/ArmCommander-AvoidObject2.gif)
 
@@ -178,7 +178,7 @@ arm_commander.add_path_constraints(moveit_tools.create_position_constraint_from_
 
 # move to the opposite side of the object
 xyzrpy = [0.4, 0.15, 0.4, 3.14, 0.0, 0.6]
-arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+arm_commander.move_to_pose(xyzrpy, wait=True)
 arm_commander.reset_state() 
 ```
 
@@ -193,7 +193,7 @@ arm_commander.add_path_constraints(moveit_tools.create_position_constraint_from_
 
 # move to above the object
 xyzrpy = [0.4, -0.15, 0.4, 3.14, 0.0, 0.6]
-arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+arm_commander.move_to_pose(xyzrpy, wait=True)
 arm_commander.reset_state() 
 ```
 ![Animation](../assets/ArmCommander-AvoidObject3.gif)

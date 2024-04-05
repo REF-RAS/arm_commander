@@ -15,7 +15,6 @@ __status__ = 'Development'
 
 import sys, signal
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
-import arm_commander.moveit_tools as moveit_tools
 
 class ArmCommanderMoveExample():
     """ This example demonstrates the following:
@@ -35,7 +34,7 @@ class ArmCommanderMoveExample():
         
         # move to a starting position
         xyzrpy = [0.4, 0.0, 0.4, 3.14, 0.0, 0.6]
-        arm_commander.move_to_pose(moveit_tools.create_pose(xyzrpy), wait=True)
+        arm_commander.move_to_pose(xyzrpy, wait=True)
         arm_commander.reset_state() 
         
         # create two collision objects that act as the reference frame

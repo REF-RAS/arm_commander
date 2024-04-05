@@ -25,10 +25,9 @@ from actionlib_msgs.msg import GoalStatus
 from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from controller_manager_msgs.srv import SwitchController
 
-from arm_commander.moveit_tools import MOVEIT_ERROR_CODE_MAP, GOAL_STATUS_MAP
+from arm_commander.tools.moveit_tools import MOVEIT_ERROR_CODE_MAP, GOAL_STATUS_MAP
 from arm_commander.states import GeneralCommanderStates, ControllerState
 
-    
 class GeneralCommander():
     """
     GeneralCommander: an interface for robot commander, with this class specifically interfacing
@@ -126,16 +125,7 @@ class GeneralCommander():
             p.object_colors.append(color)
         self.scene_pub.publish(p)
                 
-    
-    # publish the transform of all added objects
-    # def _pub_transform_all_objects(self):
-    #     object_list = self.scene.get_known_object_names()
-    #     object_poses = self.scene.get_object_poses(object_list)
-    #     for object_name in object_list:
-    #         pose_of_object = object_poses[object_name]
-    #         rospy.logwarn(f'_pub_transform_all_objects: {object_name} {type(pose_of_object)}')
-    #         self._pub_transform_object(object_name, pose_of_object)
-
+    # publish the transform of the collision objects
     def _pub_transform_all_objects(self):
         objects = self.scene.get_objects()
         for object_name in objects.keys():
@@ -144,7 +134,7 @@ class GeneralCommander():
             self._pub_transform_object(object_name, pose_of_object, frame)
 
     # publish the transform of a specific named object
-    def _pub_transform_object(self, name, pose, frame=None):
+    def _pub_transform_object(self, name, pose, frame=None) -> None:
         """ publish the transform of an object
 
         :param name: name of the object
@@ -170,14 +160,17 @@ class GeneralCommander():
         frame = self.WORLD_REFERENCE_LINK if frame is None else frame
         self.tf_pub.sendTransform(xyz, q, rospy.Time.now(), name, frame)
 
+    # internal callback functions for moveit commander message after a move group action
     def _cb_move_group_result(self, msg:MoveGroupActionResult):
         rospy.loginfo(f'The commander (move_group result callback): {GOAL_STATUS_MAP[msg.status.status]} message: {MOVEIT_ERROR_CODE_MAP[msg.result.error_code.val]}')
         self._cb_handle_result_status(msg)
 
+    # internal callback functions for moveit commander message after a trajectory action
     def _cb_trajectory_execute_result(self, msg: ExecuteTrajectoryActionResult):
         rospy.loginfo(f'The commander (trajectory result callback): {GOAL_STATUS_MAP[msg.status.status]} message: {MOVEIT_ERROR_CODE_MAP[msg.result.error_code.val]}') 
         self._cb_handle_result_status(msg)
-        
+    
+    # internal function for handling the two callback functions in one place
     def _cb_handle_result_status(self, msg):
         self.cached_result = msg
         if self.commander_state == GeneralCommanderStates.BUSY:
@@ -501,7 +494,7 @@ class GeneralCommander():
         self.cached_result = None 
     
     # call to abort the current command
-    def abort_move(self, wait=True):
+    def abort_move(self, wait=True) -> None:
         """ Abort the current command
 
         :param wait: blocks the return of function call until the abort operation has finished, defaults to True
@@ -525,7 +518,7 @@ class GeneralCommander():
             rospy.sleep(0.05)
 
     # set the maximum speed of the end-effector motion
-    def set_max_cartesian_speed(self, max_speed:float=None):
+    def set_max_cartesian_speed(self, max_speed:float=None) -> None:
         """Set the maximum speed of the end-effector motion
 
         :param max_speed: The maximum speed in meters per seconds, defaults to the system default speed
@@ -537,7 +530,7 @@ class GeneralCommander():
             self.move_group.limit_max_cartesian_link_speed(max_speed, self.END_EFFECTOR_LINK)
     
     # set the maximum planning time (in seconds)
-    def set_planning_time(self, planning_time:int):
+    def set_planning_time(self, planning_time:int) -> None:
         """Set the maximum planning time
 
         :param planning_time: The maximum planning time in seconds
@@ -546,7 +539,7 @@ class GeneralCommander():
         self.move_group.set_planning_time(planning_time)
     
     # set the goal tolerance (a list of joint, position and orientation goal tolerances)
-    def set_goal_tolerance(self, tol_list:list): 
+    def set_goal_tolerance(self, tol_list:list) -> None: 
         """Set the goal tolerance 
 
         :param tol_list: set the goal tolerance as a list of joint, position and orientation goal tolerances
@@ -564,7 +557,7 @@ class GeneralCommander():
         return self.move_group.get_goal_tolerance()
 
     # set the joint positions (as a list) of a named pose
-    def add_named_pose(self, name: str, joint_values: list):
+    def add_named_pose(self, name: str, joint_values: list) -> None:
         """ Add a named pose specified in joint positions to the commander
 
         :param name: The name of the pose to be defined
@@ -584,7 +577,7 @@ class GeneralCommander():
         self.move_group.forget_joint_values(name)
 
     # runs a provided service given a namespace (ns) and input class (cls)
-    def invoke_service(self, ns: str, cls, **kwargs):
+    def invoke_service(self, ns: str, cls, **kwargs) -> None:
         """Invokes a service of given namespace (ns) and class (cls)
         Credit: https://github.com/ros-controls/ros_control/issues/511 
 
@@ -637,7 +630,7 @@ class GeneralCommander():
     # --- Functions for sending a command of robot manipulation
 
     # command the robot arm to move to a named pose (joint-space) as defined in the scene model 
-    def move_to_named_pose(self, named_pose:str, wait=True):
+    def move_to_named_pose(self, named_pose:str, wait=True) -> None:
         """ Command the robot arm to move to a named pose (joint-space) as defined in the scene model or
         the commander through :method: 'add_named_pose'.
 
@@ -833,7 +826,7 @@ class GeneralCommander():
             self.action_lock.release()
 
     # command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference
-    def rotate_to_orientation(self, roll:float=None, pitch:float=None, yaw:float=None, reference_frame:str=None, wait=True):
+    def rotate_to_orientation(self, roll:float=None, pitch:float=None, yaw:float=None, reference_frame:str=None, wait=True) -> Pose:
         """Command the robot arm to rotate the end effector to an orientation (rpy) optionally in a particular frame of reference
   
         :param roll: The target roll orientation, defaults to the current value 
@@ -974,7 +967,7 @@ class GeneralCommander():
             self.action_lock.release()
 
     # command the robot arm to move to a pose defined by joint values
-    def move_to_joint_pose(self, joint_pose:list, wait=True):
+    def move_to_joint_pose(self, joint_pose:list, wait=True) -> None:
         """ Command the robot arm to move to a named pose (joint-space) as defined in the scene model or
         the commander through :method: 'move_to_joint_pose'.
 
@@ -1054,7 +1047,7 @@ class GeneralCommander():
     # -- Functions: objects for collision detection and planning
     
     # remove all scene objects that have been added through the commander
-    def reset_world(self):
+    def reset_world(self) -> None:
         """Remove all scene objects that have been added through the commander
         """
         self.move_group.detach_object(self.END_EFFECTOR_LINK)
@@ -1062,7 +1055,7 @@ class GeneralCommander():
         self.scene.remove_world_object()
     
     # wait for the scene to update after addition or removal of collision objects
-    def _wait_for_scene_update(self, func, timeout=5.0):
+    def _wait_for_scene_update(self, func, timeout=5.0) -> None:
         start_time = rospy.get_time()
         while (rospy.get_time() - start_time < timeout):
             if func():
@@ -1071,7 +1064,7 @@ class GeneralCommander():
         rospy.logwarn(f'{__class__.__name__} (_wait_for_scene_update): timeout ({timeout} seconds)')
     
     # add an object (defined with a meshed model, pose, scale) to the scene
-    def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list, reference_frame:str=None, rgba=None):
+    def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list, reference_frame:str=None, rgba=None) -> None:
         """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
 
         :param object_name: The name given to the new scene object
@@ -1100,7 +1093,7 @@ class GeneralCommander():
         self._pub_transform_object(object_name, object_pose)
     
     # add an object (a shpere of given radius and position)
-    def add_sphere_to_scene(self, object_name:str, radius:float, xyz:list, reference_frame:str=None, rgba=None):
+    def add_sphere_to_scene(self, object_name:str, radius:float, xyz:list, reference_frame:str=None, rgba=None) -> None:
         """Add an object to the scene for collision avoidance in path planning
 
         :param object_name: The name given to the new scene object
@@ -1121,7 +1114,7 @@ class GeneralCommander():
         self._pub_transform_object(object_name, object_pose) 
         
     # add a box (a box of given dimension, position and orientation)    
-    def add_box_to_scene(self, object_name:str, dimensions:list, xyz:list, rpy:list=[0, 0, 0], reference_frame:str=None, rgba=None):
+    def add_box_to_scene(self, object_name:str, dimensions:list, xyz:list, rpy:list=[0, 0, 0], reference_frame:str=None, rgba=None) -> None:
         """ Add a box to the scene for collision avoidance in path planning
         
         :param object_name: The name given to the new scene object
@@ -1241,7 +1234,7 @@ class GeneralCommander():
         return xyzrpy
         
     # sets up the limits of the workspace using 6 walls
-    def set_workspace_walls(self, min_x:float, min_y:float, min_z:float, max_x:float, max_y:float, max_z:float, rgba=[0.6, 0.0, 0.6, 0.05]):
+    def set_workspace_walls(self, min_x:float, min_y:float, min_z:float, max_x:float, max_y:float, max_z:float, rgba=[0.6, 0.0, 0.6, 0.05]) -> None:
         """A convenient function for setting up a workspace as a space surrounded by 6 walls
 
         :param min_x: The minimum x of the workspace, or None to remove the workspace walls
@@ -1276,7 +1269,7 @@ class GeneralCommander():
         rospy.sleep(1.0) # wait for the walls to be registered
 
     # internal function for creating a wall
-    def _create_wall(self, name, frame_id, x, y, z, size_x, size_y, size_z, rgba=None):
+    def _create_wall(self, name, frame_id, x, y, z, size_x, size_y, size_z, rgba=None) -> None:
         self.scene.remove_world_object(name)
         box_pose = PoseStamped()
         box_pose.header.frame_id = frame_id
@@ -1290,12 +1283,12 @@ class GeneralCommander():
             self.object_name_color_list[name] = rgba
             
     # internal function for removing all walls
-    def _remove_all_walls(self):
+    def _remove_all_walls(self) -> None:
         self.remove_object(self.wall_name_list)
         self.wall_name_list.clear()
 
     # internal function for setting the colour of a wall
-    def _set_object_color(self, name, r, g, b, a = 0.9):
+    def _set_object_color(self, name, r, g, b, a = 0.9) -> ObjectColor:
         color = ObjectColor()
         color.id = name
         color.color.r = r
@@ -1307,7 +1300,7 @@ class GeneralCommander():
     # --------------------------------
     # functions for setting path constraints
       
-    def add_path_constraints(self, constraint):
+    def add_path_constraints(self, constraint) -> None:
         """Add a constraint to the commander. Refer to :module:'arm_commander.moveit_tools' for functions to conveniently create
         a constraint object 
 
@@ -1324,7 +1317,7 @@ class GeneralCommander():
             self.the_constraints.position_constraints.append(constraint)           
         self.move_group.set_path_constraints(self.the_constraints)
         
-    def clear_path_constraints(self):
+    def clear_path_constraints(self) -> None:
         """Clear all the added constraints in the commander
         """
         
@@ -1333,13 +1326,13 @@ class GeneralCommander():
         self.the_constraints.position_constraints.clear()
         self.move_group.set_path_constraints(None)
     
-    def disable_path_constraints(self):
+    def disable_path_constraints(self) -> None:
         """Disable the added constraints from taking effect in the next commands
         """
         
         self.move_group.set_path_constraints(None)
         
-    def enable_path_constraints(self):
+    def enable_path_constraints(self) -> None:
         """Enable the added constraints
         """
         

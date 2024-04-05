@@ -16,9 +16,6 @@ __status__ = 'Development'
 
 import sys, copy, threading, time, signal
 
-from arm_commander.moveit_tools import MOVEIT_ERROR_CODE_MAP, GOAL_STATUS_MAP
-from arm_commander.states import ControllerState, GeneralCommanderStates
-import arm_commander.moveit_tools as moveit_tools
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
 
 class ArmCommanderDisplayInfo():

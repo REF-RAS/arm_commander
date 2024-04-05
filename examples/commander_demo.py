@@ -17,7 +17,8 @@ import sys, time, signal, os, yaml
 from geometry_msgs.msg import Pose, PoseStamped, Twist
 
 from arm_commander.states import ControllerState, GeneralCommanderStates
-import arm_commander.moveit_tools as moveit_tools
+import arm_commander.tools.moveit_tools as moveit_tools
+import arm_commander.tools.pose_tools as pose_tools
 from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
 
 class GeneralCommanderDemo():
@@ -196,17 +197,17 @@ class GeneralCommanderDemo():
             arm_commander.reset_state()
             
             logger.info(f'current pose: {arm_commander.pose_in_frame_as_xyzrpy()}')
-            target_pose:PoseStamped = moveit_tools.create_pose_stamped([0.4, -0.3, 0.6, -3.14, 0, 1.57], arm_commander.WORLD_REFERENCE_LINK)
+            target_pose:PoseStamped = pose_tools.list_to_pose_stamped([0.4, -0.3, 0.6, -3.14, 0, 1.57], arm_commander.WORLD_REFERENCE_LINK)
             logger.info(f'move to target pose: {target_pose.pose}')
             arm_commander.move_to_pose(target_pose)
             arm_commander.reset_state()
             
-            target_pose:PoseStamped = moveit_tools.create_pose_stamped([0.65, 0.1, 0.5, -3.14, 0, 0], arm_commander.WORLD_REFERENCE_LINK)
+            target_pose:PoseStamped = pose_tools.list_to_pose_stamped([0.65, 0.1, 0.5, -3.14, 0, 0], arm_commander.WORLD_REFERENCE_LINK)
             logger.info(f'move to target pose: {target_pose.pose}')
             arm_commander.move_to_pose(target_pose)
             arm_commander.reset_state()
             
-            target_pose:PoseStamped = moveit_tools.create_pose_stamped([0.0, 0.35, 0.3, -3.14, 0, 1.57], arm_commander.WORLD_REFERENCE_LINK)
+            target_pose:PoseStamped = pose_tools.list_to_pose_stamped([0.0, 0.35, 0.3, -3.14, 0, 1.57], arm_commander.WORLD_REFERENCE_LINK)
             logger.info(f'move to target pose: {target_pose.pose}')
             arm_commander.move_to_pose(target_pose)
             arm_commander.reset_state()     
