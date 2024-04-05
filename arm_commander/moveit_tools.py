@@ -122,15 +122,15 @@ def xyzrpy_to_pose_stamped(xyzrpy:list, reference_frame:str) -> PoseStamped:
     """
     return conversions.list_to_pose_stamped(xyzrpy, target_frame=reference_frame)
 
-def pose_stamped_to_xyzrpy(the_pose:PoseStamped) -> list:
-    """Convert a pose in a PoseStamped object to a (xyzrpy) list 
+def pose_to_xyzrpy(the_pose:Pose) -> list:
+    """Convert a pose in a Pose object to a (xyzrpy) list 
 
     :param the_pose: The pose
     :type the_pose: PoseStamped
     :return: The pose in xyzrpy
     :rtype: list
     """
-    return conversions.pose_to_list(the_pose.pose)
+    return conversions.pose_to_list(the_pose)
 
 def create_pose(xyzrpy:list) -> Pose:
     """ Convert a pose in the form of xyzrpy (list) to a Pose object
@@ -144,7 +144,7 @@ def create_pose(xyzrpy:list) -> Pose:
 
 # -----------------------------------------------
 # functions for creating Pose and PoseStamp objects
-def create_pose_stamped(xyzrpy:list, target_frame:str) -> PoseStamped:
+def create_pose_stamped(xyzrpy:list, reference_frame:str) -> PoseStamped:
     """ Convert a pose in the form of xyzrpy (list) to a PoseStamped object
     
     :param xyzrpy: a list of 6 numbers
@@ -154,7 +154,7 @@ def create_pose_stamped(xyzrpy:list, target_frame:str) -> PoseStamped:
     :return: the created Pose object according to the parameter 
     :rtype: Pose
     """
-    return xyzrpy_to_pose_stamped(xyzrpy, target_frame)
+    return conversions.list_to_pose_stamped(xyzrpy, target_frame=reference_frame)
 
 # -----------------------------------------------
 # functions for creating Constraints objects

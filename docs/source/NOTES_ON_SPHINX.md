@@ -58,10 +58,8 @@ sudo pip install m2r2
 ```
 
 ## References
+[Deploy Sphinx documentation to Github Pages](https://coderefinery.github.io/documentation/gh_workflow/)
 
+[Include Readme](https://stackoverflow.com/questions/46278683/include-my-markdown-readme-into-sphinx/68005314#68005314)
 
-Deploy Sphinx documentation to Github Pages
-https://coderefinery.github.io/documentation/gh_workflow/
-
-Include Readme
-https://stackoverflow.com/questions/46278683/include-my-markdown-readme-into-sphinx/68005314#68005314
+[Starter Workflow Examples](https://github.com/actions/starter-workflows/)

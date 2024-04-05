@@ -90,9 +90,10 @@ class GeneralCommander():
         # internal states             
         self.commander_state:GeneralCommanderStates = GeneralCommanderStates.INIT
         self.cached_result:MoveGroupActionResult = None
-        # define the walls as the workspace limits
+        # record the list of walls of the workspace
         self.wall_name_list = []
-
+        # record the collision objects, including the walls, added to the commander and their color
+        self.object_name_color_list = {}
         # publisher for the planning scene
         self.scene_pub = rospy.Publisher('planning_scene', PlanningScene, queue_size=10)
         self.tf_pub = tf.TransformBroadcaster()
@@ -101,47 +102,73 @@ class GeneralCommander():
         self.the_constraints = Constraints()
         self.the_constraints.name = 'commander'
         # set timeout
-        self.timer = rospy.Timer(rospy.Duration(1/self.TF_PUB_RATE), self._cb_timer)
-    
+        self.timer = rospy.Timer(rospy.Duration(1/self.TF_PUB_RATE), self._cb_timer_tf)
+        self.timer_scene = rospy.Timer(rospy.Duration(1.0), self._cb_timer_scene)
     # -----------------------------------------------------
     # -- Internal functions for publishing states and poses
     
-    # callback for waking up an IDLE robot agent
-    def _cb_timer(self, event):
+    # Internal functions: callback for publishing the object transformation and color of workspace
+    def _cb_timer_tf(self, event):
         self._pub_transform_all_objects()
 
-    # publish colors of the wall objects 
-    def _pub_workspace_color(self):
+    def _cb_timer_scene(self, event):
+        self._pub_objects_color()
+        
+    # publish colors of the other collision objects 
+    def _pub_objects_color(self):
         p = PlanningScene()
         p.is_diff = True
-        for wall in self.wall_name_list:
-            color = self._set_object_color(wall, 0.6, 0, 1, 0.2)
+        for object_name in self.object_name_color_list.keys():
+            rgba = self.object_name_color_list[object_name]
+            if rgba is None:
+                continue
+            color = self._set_object_color(object_name, *rgba)
             p.object_colors.append(color)
         self.scene_pub.publish(p)
+                
     
     # publish the transform of all added objects
+    # def _pub_transform_all_objects(self):
+    #     object_list = self.scene.get_known_object_names()
+    #     object_poses = self.scene.get_object_poses(object_list)
+    #     for object_name in object_list:
+    #         pose_of_object = object_poses[object_name]
+    #         rospy.logwarn(f'_pub_transform_all_objects: {object_name} {type(pose_of_object)}')
+    #         self._pub_transform_object(object_name, pose_of_object)
+
     def _pub_transform_all_objects(self):
-        object_list = self.scene.get_known_object_names()
-        object_poses = self.scene.get_object_poses(object_list)
-        for object_name in object_list:
-            pose_of_object = object_poses[object_name]
-            self._pub_transform_object(object_name, pose_of_object)
+        objects = self.scene.get_objects()
+        for object_name in objects.keys():
+            pose_of_object = objects[object_name].pose
+            frame = objects[object_name].header.frame_id
+            self._pub_transform_object(object_name, pose_of_object, frame)
 
     # publish the transform of a specific named object
-    def _pub_transform_object(self, name, pose):
+    def _pub_transform_object(self, name, pose, frame=None):
+        """ publish the transform of an object
+
+        :param name: name of the object
+        :type name: str
+        :param pose: the pose of the object 
+        :type pose: Pose, PoseStamped, list of 6 or 7
+        :param frame: the frame against which the pose is defined, ignored if PoseStamped is provided, defaults to None
+        :type frame: str, optional
+        """
         if type(pose) == Pose:
             pose = conversions.pose_to_list(pose)
         elif type(pose) == PoseStamped:
+            frame = pose.header.frame_id            
             pose = conversions.pose_to_list(pose.pose)
         xyz = pose[:3]
         if type(pose) != list:
             rospy.logerr(f'{__class__.__name__}: parameter (pose) is not list of length 6 or 7 or a Pose object -> fix the parameter at behaviour construction')
             raise TypeError(f'A parameter is invalid')  
         if len(pose) == 6:
-            q = tf.transformations.quaternion_from_euler([pose[3:]])
+            q = tf.transformations.quaternion_from_euler(*pose[3:])
         elif len(pose) == 7:
             q = pose[3:]
-        self.tf_pub.sendTransform(xyz, q, rospy.Time.now(), name, self.WORLD_REFERENCE_LINK)
+        frame = self.WORLD_REFERENCE_LINK if frame is None else frame
+        self.tf_pub.sendTransform(xyz, q, rospy.Time.now(), name, frame)
 
     def _cb_move_group_result(self, msg:MoveGroupActionResult):
         rospy.loginfo(f'The commander (move_group result callback): {GOAL_STATUS_MAP[msg.status.status]} message: {MOVEIT_ERROR_CODE_MAP[msg.result.error_code.val]}')
@@ -1030,7 +1057,6 @@ class GeneralCommander():
     def reset_world(self):
         """Remove all scene objects that have been added through the commander
         """
-        
         self.move_group.detach_object(self.END_EFFECTOR_LINK)
         self.scene.remove_attached_object(self.END_EFFECTOR_LINK)
         self.scene.remove_world_object()
@@ -1043,33 +1069,9 @@ class GeneralCommander():
                 return
             rospy.sleep(0.2)
         rospy.logwarn(f'{__class__.__name__} (_wait_for_scene_update): timeout ({timeout} seconds)')
-
-    # # add an object (defined with a meshed model, pose, scale) to the scene
-    # def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list):
-    #     """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
-
-    #     :param object_name: The name given to the new scene object
-    #     :type object_name: str
-    #     :param model_file: The path to the file that defines the mesh of the object
-    #     :type model_file: str
-    #     :param object_scale: The list of scale in 3 dimension
-    #     :type object_scale: list
-    #     :param xyz: The position of the object in the world/default reference frame
-    #     :type xyz: list
-    #     :param rpy: The orientation of the object in euler angles in the world/default reference frame
-    #     :type rpy: list
-    #     """
-    #     self.scene.remove_world_object(object_name)
-    #     object_pose = conversions.list_to_pose_stamped(xyz + rpy, self.WORLD_REFERENCE_LINK)
-    #     self.scene.add_mesh(
-    #             object_name, object_pose,
-    #             model_file, object_scale
-    #     )
-    #     self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
-    #     self._pub_transform_object(object_name, object_pose)
     
     # add an object (defined with a meshed model, pose, scale) to the scene
-    def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list, reference_frame:str=None):
+    def add_object_to_scene(self, object_name:str, model_file:str, object_scale:list, xyz:list, rpy:list, reference_frame:str=None, rgba=None):
         """Add an object (defined with a meshed model, pose, scale) to the scene for collision avoidance in path planning
 
         :param object_name: The name given to the new scene object
@@ -1094,10 +1096,11 @@ class GeneralCommander():
                 model_file, object_scale
         )
         self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
+        self.object_name_color_list[object_name] = rgba
         self._pub_transform_object(object_name, object_pose)
     
     # add an object (a shpere of given radius and position)
-    def add_sphere_to_scene(self, object_name:str, radius:float, xyz:list, reference_frame:str=None):
+    def add_sphere_to_scene(self, object_name:str, radius:float, xyz:list, reference_frame:str=None, rgba=None):
         """Add an object to the scene for collision avoidance in path planning
 
         :param object_name: The name given to the new scene object
@@ -1114,10 +1117,11 @@ class GeneralCommander():
         object_pose = conversions.list_to_pose_stamped(xyz + [0, 0, 0], reference_frame)
         self.scene.add_sphere(object_name, object_pose, radius)
         self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
+        self.object_name_color_list[object_name] = rgba
         self._pub_transform_object(object_name, object_pose) 
         
     # add a box (a box of given dimension, position and orientation)    
-    def add_box_to_scene(self, object_name:str, dimensions:list, xyz:list, rpy:list=[0, 0, 0], reference_frame:str=None):
+    def add_box_to_scene(self, object_name:str, dimensions:list, xyz:list, rpy:list=[0, 0, 0], reference_frame:str=None, rgba=None):
         """ Add a box to the scene for collision avoidance in path planning
         
         :param object_name: The name given to the new scene object
@@ -1131,12 +1135,12 @@ class GeneralCommander():
         :param reference_frame: The frame of reference of the xyz and rpy
         :type reference_frame: str, default to WORLD_REFERENCE_LINK     
         """
-        
         reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
-        object_pose = conversions.list_to_pose_stamped(xyz + rpy, reference_frame)
+        object_pose = conversions.list_to_pose_stamped(xyz + rpy, reference_frame)   
         self.scene.add_box(object_name, object_pose, size=dimensions)
         self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
-        self._pub_transform_object(object_name, object_pose)      
+        self.object_name_color_list[object_name] = rgba
+        self._pub_transform_object(object_name, object_pose, reference_frame)      
         
     # returns a list of current objects that have been added to the commander
         """ Returns a list of current objects that have been added to the commander
@@ -1146,15 +1150,22 @@ class GeneralCommander():
         return self.scene.get_known_object_names()
     
     # remove object given the name
-    def remove_object(self, object_name:str) -> None:
+    def remove_object(self, object_name) -> None:
         """ Remove object given the name or all objects in the scene if None
 
-        :param object_name: The name of the object, None for removing all objects
+        :param object_name: The name of the object, a list of names of multiple objects, or None for removing all objects
         :type object_name: str
         """
-        
-        self.scene.remove_world_object(object_name)
-        self._wait_for_scene_update(lambda: object_name not in self.scene.get_known_object_names())
+        if object_name is None:
+            self.scene.remove_world_object(object_name)
+            self.object_name_color_list.clear()
+            return
+        if type(object_name) not in [list, tuple]:
+            object_name = [object_name]
+        for name in object_name:
+            self.scene.remove_world_object(name)
+            self._wait_for_scene_update(lambda: name not in self.scene.get_known_object_names())
+            del self.object_name_color_list[name]
 
     # attach an object to the end_effector
     def attach_object_to_end_effector(self, object_name:str) -> bool:
@@ -1221,7 +1232,6 @@ class GeneralCommander():
         :return: The pose of the queried object as a list of 6 floats (xyzrpy)
         :rtype: list
         """
-        
         object_pose = self.get_object_pose(object_name)
         object_pose_as_list = conversions.pose_to_list(object_pose)
         xyzrpy = object_pose_as_list[:3]
@@ -1231,10 +1241,10 @@ class GeneralCommander():
         return xyzrpy
         
     # sets up the limits of the workspace using 6 walls
-    def set_workspace_walls(self, min_x:float, min_y:float, min_z:float, max_x:float, max_y:float, max_z:float):
+    def set_workspace_walls(self, min_x:float, min_y:float, min_z:float, max_x:float, max_y:float, max_z:float, rgba=[0.6, 0.0, 0.6, 0.05]):
         """A convenient function for setting up a workspace as a space surrounded by 6 walls
 
-        :param min_x: The minimum x of the workspace
+        :param min_x: The minimum x of the workspace, or None to remove the workspace walls
         :type min_x: float
         :param min_y: The minimum y of the workspace
         :type min_y: float
@@ -1247,6 +1257,9 @@ class GeneralCommander():
         :param max_z: The maximum z of the workspace
         :type max_z: flost
         """
+        if min_x is None:  # remove the walls
+            self._remove_all_walls()
+            return
         thickness = 0.02
         size_x = max_x - min_x
         size_y = max_y - min_y
@@ -1254,17 +1267,16 @@ class GeneralCommander():
         cx = (max_x + min_x) / 2
         cy = (max_y + min_y) / 2
         cz = (max_z + min_z) / 2
-        self._create_wall('ws_top', self.WORLD_REFERENCE_LINK, cx, cy, max_z, size_x, size_y, thickness)
-        self._create_wall('ws_bottom', self.WORLD_REFERENCE_LINK, cx, cy, min_z, size_x, size_y, thickness)  
-        self._create_wall('ws_side_1', self.WORLD_REFERENCE_LINK, cx, min_y, cz, size_x, thickness, size_z)
-        self._create_wall('ws_side_2', self.WORLD_REFERENCE_LINK, cx, max_y, cz, size_x, thickness, size_z)  
-        self._create_wall('ws_side_3', self.WORLD_REFERENCE_LINK, min_x, cy, cz, thickness, size_y, size_z)
-        self._create_wall('ws_side_4', self.WORLD_REFERENCE_LINK, max_x, cy, cz, thickness, size_y, size_z) 
+        self._create_wall('ws_top', self.WORLD_REFERENCE_LINK, cx, cy, max_z, size_x, size_y, thickness, rgba)
+        self._create_wall('ws_bottom', self.WORLD_REFERENCE_LINK, cx, cy, min_z, size_x, size_y, thickness, rgba)  
+        self._create_wall('ws_side_1', self.WORLD_REFERENCE_LINK, cx, min_y, cz, size_x, thickness, size_z, rgba)
+        self._create_wall('ws_side_2', self.WORLD_REFERENCE_LINK, cx, max_y, cz, size_x, thickness, size_z, rgba)  
+        self._create_wall('ws_side_3', self.WORLD_REFERENCE_LINK, min_x, cy, cz, thickness, size_y, size_z, rgba)
+        self._create_wall('ws_side_4', self.WORLD_REFERENCE_LINK, max_x, cy, cz, thickness, size_y, size_z, rgba) 
         rospy.sleep(1.0) # wait for the walls to be registered
-        self._pub_workspace_color()
 
     # internal function for creating a wall
-    def _create_wall(self, name, frame_id, x, y, z, size_x, size_y, size_z):
+    def _create_wall(self, name, frame_id, x, y, z, size_x, size_y, size_z, rgba=None):
         self.scene.remove_world_object(name)
         box_pose = PoseStamped()
         box_pose.header.frame_id = frame_id
@@ -1275,6 +1287,12 @@ class GeneralCommander():
         self.scene.add_box(name, box_pose, size=(size_x, size_y, size_z))
         if name not in self.wall_name_list:
             self.wall_name_list.append(name)
+            self.object_name_color_list[name] = rgba
+            
+    # internal function for removing all walls
+    def _remove_all_walls(self):
+        self.remove_object(self.wall_name_list)
+        self.wall_name_list.clear()
 
     # internal function for setting the colour of a wall
     def _set_object_color(self, name, r, g, b, a = 0.9):

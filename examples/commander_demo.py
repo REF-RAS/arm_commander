@@ -51,7 +51,7 @@ class GeneralCommanderDemo():
         sys.exit(0)
 
     def stop(self, *args, **kwargs):
-        self.arm_commander.abort_move(wait=True)
+        self.arm_commander.abort_move(wait=False)
         self.arm_commander.clear_path_constraints()
         self.arm_commander.reset_world()
         sys.exit(0)
@@ -107,7 +107,7 @@ class GeneralCommanderDemo():
             
             arm_commander.add_box_to_scene('the_box', self.demo_config['scene']['the_box']['dimensions'], 
                                            self.demo_config['scene']['the_box']['position'],
-                                           self.demo_config['scene']['the_box']['orientation'])
+                                           self.demo_config['scene']['the_box']['orientation'], rgba=[1.0, 0.0, 0.0, 1.0])
             time.sleep(1.0)
             
             # Move a displacement
