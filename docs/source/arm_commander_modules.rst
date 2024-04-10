@@ -31,3 +31,11 @@ arm\_commander.tools.pose\_tools module
     :members:
     :undoc-members:
     :show-inheritance:
+
+arm\_commander.tools.rospkg\_tools module
+----------------------------------------
+
+.. automodule:: arm_commander.tools.rospkg_tools
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -14,6 +14,7 @@ __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
 import sys, copy, threading, time, signal, math, traceback, timeit, numbers, logging
+from collections import defaultdict
 import rospy, tf
 from tf2_msgs.msg import TFMessage
 import moveit_commander
@@ -26,7 +27,9 @@ from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
 from controller_manager_msgs.srv import SwitchController
 
 from arm_commander.tools.moveit_tools import MOVEIT_ERROR_CODE_MAP, GOAL_STATUS_MAP
+from arm_commander.tools.rospkg_tools import PackageFile
 from arm_commander.states import GeneralCommanderStates, ControllerState
+
 
 class GeneralCommander():
     """
@@ -93,6 +96,8 @@ class GeneralCommander():
         self.wall_name_list = []
         # record the collision objects, including the walls, added to the commander and their color
         self.object_name_color_list = {}
+        # setup custom transforms
+        self.custom_transform_object_dict = defaultdict(lambda: None)
         # publisher for the planning scene
         self.scene_pub = rospy.Publisher('planning_scene', PlanningScene, queue_size=10)
         self.tf_pub = tf.TransformBroadcaster()
@@ -124,14 +129,20 @@ class GeneralCommander():
             color = self._set_object_color(object_name, *rgba)
             p.object_colors.append(color)
         self.scene_pub.publish(p)
-                
+
     # publish the transform of the collision objects
     def _pub_transform_all_objects(self):
+        # publish the collision objects 
         objects = self.scene.get_objects()
         for object_name in objects.keys():
             pose_of_object = objects[object_name].pose
             frame = objects[object_name].header.frame_id
             self._pub_transform_object(object_name, pose_of_object, frame)
+        # publish the custom transform objects
+        for name in self.custom_transform_object_dict:
+            the_transform = self.custom_transform_object_dict[name]
+            xyzrpy = the_transform['xyzrpy']
+            self._pub_transform_object(name, xyzrpy, the_transform['frame'])
 
     # publish the transform of a specific named object
     def _pub_transform_object(self, name, pose, frame=None) -> None:
@@ -1084,6 +1095,11 @@ class GeneralCommander():
         reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
         self.scene.remove_world_object(object_name)
         object_pose = conversions.list_to_pose_stamped(xyz + rpy, reference_frame)
+        try:
+            model_file = PackageFile.resolve_to_path(model_file)
+        except Exception as ex:
+            logger.warning(f'SceneToRViz (display_objects): Invalid model_file for object ({model_file}): {ex}')
+            return        
         self.scene.add_mesh(
                 object_name, object_pose,
                 model_file, object_scale
@@ -1296,6 +1312,49 @@ class GeneralCommander():
         color.color.b = b
         color.color.a = a
         return color
+
+    # --------------------------------
+    # functions for adding custom transforms
+    def add_custom_transform(self, name, xyz, rpy, parent_frame=None) -> None:
+        """ Add a custom transform to the rviz visualizer, which is broadcast regularly
+
+        :param name: the name of the transform
+        :param xyz: the xyz pose
+        :param rpy: the rpy pose
+        :param parent_frame: the reference frame
+        """
+        if name is None or xyz is None or rpy is None:
+            logger.error(f'SceneToRViz (add_custom_transform): No parameter can be None')
+            raise AssertionError('A parameter is none')
+        self.custom_transform_object_dict[name] = {'xyzrpy': xyz + rpy, 'frame': parent_frame}
+
+    def update_custom_transform_pose(self, name, xyz=None, rpy=None, parent_frame=None) -> None:
+        """ Update the pose of a custom transform
+
+        :param name: the name of the transform to be updated
+        :param xyz: the updated xyz, defaults to None meaning unchanged
+        :param rpy: the updated rpy, defaults to None meaning unchanged
+        :param frame: the updated frame, defaults to None meaning unchanged
+        """
+        transform_object = self.custom_transform_object_dict[name]
+        if transform_object is None:
+            logger.warning(f'__name__ (update_custom_transform_pose): the custom transform name {name} is not found')
+            return False
+        xyz = xyz if xyz is not None else transform_object['xyzrpy'][:3]
+        rpy = rpy if rpy is not None else transform_object['xyzrpy'][3:]
+        parent_frame = parent_frame if xyz is not None else transform_object['frame']
+        self.add_custom_transform(name, xyz, rpy, parent_frame)
+
+    def remove_custom_transform(self, name=None):
+        """ Clear a custom transform or all if name is None
+
+        :param name: the name of the transform to be removed, or None to remove all
+        """
+        if name is None:
+            self.custom_transform_object_dict.clear()
+        elif name in self.custom_transform_object_dict:
+            del self.custom_transform_object_dict[name]
+    
 
     # --------------------------------
     # functions for setting path constraints

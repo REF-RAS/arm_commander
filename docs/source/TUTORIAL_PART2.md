@@ -54,7 +54,7 @@ Robot manipulation can use the world's frame and other reference frames for move
 
 The example program `/framemove/frame_move_1.py` defines a box and use the box's position [0.5, 0.2, 0.2] and orientation [0, 0, 0] to define a reference frame.
 
-```
+```python
 arm_commander.add_box_to_scene('area_1', [0.4, 0.2, 0.01], xyz=[0.5, 0.2, 0.2], rpy=[0, 0, 0])
 ```
 - The name of the object is the name of the reference frame, and in this case it is `area_1`.
@@ -63,7 +63,7 @@ arm_commander.add_box_to_scene('area_1', [0.4, 0.2, 0.01], xyz=[0.5, 0.2, 0.2], 
 - The orientation of the box is [0, 0, 0]
 
 The following snippet first moves to the origin [0.0, 0.0] of `area_1`, and then to the two opposite corners ([-0.2, -0.1] and [0.2 and 0.1]) of the the box.
-```
+```python
 # send a move command to a position in the frame of area_1
 arm_commander.move_to_position(x = 0.0, y = 0.0, z = 0.15, wait=True, reference_frame='area_1')
 arm_commander.reset_state()
@@ -84,13 +84,13 @@ For example, a set of movements defined in related to a workbench can be reused 
 
 The following defines two __areas__ at different position and of a different orientation.
 
-```
+```python
 arm_commander.add_box_to_scene('area_1', [0.4, 0.2, 0.01], xyz=[0.5, 0.2, 0.2], rpy=[0, 0, 0])
 arm_commander.add_box_to_scene('area_2', [0.4, 0.2, 0.01], xyz=[0.5, -0.2, 0.1], rpy=[0, 0, 1.57])     
 
 ```
 The same movement commands can be used to produce the same relative movements within the two areas by specifying the reference frames.
-```
+```python
 # send a move command to a position in the frame of area_1
 arm_commander.move_to_position(x = 0.0, y = 0.0, z = 0.15, wait=True, reference_frame='area_1')
 arm_commander.reset_state()
@@ -125,13 +125,13 @@ The following table summarizes the support provided by each of the move function
 
 A workspace can be defined in the arm commander for confining arm movements within a 3D bounding box. Internally, the workspace is constructed by 6 box-shaped collision objects, one on each of the 6 sides.
 The following snipped can be found in the program file `/collision/workspace.py`
-```
+```python
 # add the workspace as a bounding box of xmin, ymin, zmin, zmax, ymax, zmax
 workspace_bbox = [-0.4, -0.3, -0.2, 0.6, +0.3, 0.8]
 arm_commander.set_workspace_walls(*workspace_bbox)
 ```
 The workspace appears as a semi-transparent purple box in RViz. Move commands that result in any part of the robot arm infringing the workspace limits are aborted and a `TIMED_OUT` error is returned.
-```
+```python
 # move within the workspace
 arm_commander.move_to_position(x = 0.3, y = -0.1, z = 0.3, wait=True)
 arm_commander.reset_state()
@@ -151,7 +151,7 @@ The program file `/collision/avoid_object.py` illustrates how the end-effector o
 
 The program file `/collision/avoid_object_fix_rotation.py` illustrates the use of `OrientationConstraint`.
 
-```
+```python
 arm_commander.add_path_constraints(moveit_tools.create_path_orientation_constraint(arm_commander.get_end_effector_link(), 
                 arm_commander.pose_in_frame(), 0.01, 6.28, 0.01))
 
@@ -170,7 +170,7 @@ arm_commander.reset_state()
 Another `OrientationConstraint` has been commented out, try using it to replace the current one and observe the difference.
 
 The program file `/collision/avoid_object_fix_region.py` illustrates the use of two different `PositionConstraint` objects. The first one allows the end-effector to pass over the object.
-```
+```python
 # add an positional path constraint to restrict the end-effector to move within the bbox below, which is the nearer side of the object
 allowed_bbox = [0.1, -0.3, 0.3, 0.5, +0.3, 0.6]
 arm_commander.add_path_constraints(moveit_tools.create_position_constraint_from_bbox(arm_commander.get_end_effector_link(), 
@@ -183,7 +183,7 @@ arm_commander.reset_state()
 ```
 
 The second one allows the end-effector to move in front of the object.
-```
+```python
 # clear the current positional path constraint and add another positional path constraint
 # to restrict the end-effector to move within the bbox below, which is the outer side of the object
 arm_commander.clear_path_constraints()   

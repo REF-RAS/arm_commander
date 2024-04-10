@@ -68,7 +68,7 @@ The function `get_object` of the class `GeneralCommanderFactory` returns the __s
 ### Example: Essential Startup Sequence in Applications
 
 The following shows the essential `GeneralCommander` startup sequence in applications.
-```
+```python
 arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
 arm_commander.spin(spin_in_thread=True)
 arm_commander.wait_for_ready_to_move()
@@ -126,7 +126,7 @@ The following functions accepts multiple positions or poses in one move command.
 ### Example: Issuing an Asynchronous Move Command
 
 The following shows an example of issuing an asynchronous move command
-```
+```python
 arm_commander.move_to_position(x = -0.6, y = 0.2, wait=False)        
 while True:
     the_state = arm_commander.get_commander_state()
@@ -138,7 +138,7 @@ arm_commander.reset_state()
 ### Example: Issuing an Multi-Waypoints Move Command
 
 The following shows an example of issuing a move command comprising multiple waypoints.
-```
+```python
 xyzrpy_list = [(0.6, 0.0, 0.4, 3.14, 0, 0), 
             (0.6, 0.2, 0.5, 3.14, 0, 0), 
             (0.6, 0.2, 0.6, 3.14, 0, 1.58)]
@@ -172,6 +172,23 @@ elif the_state in [GeneralCommanderStates.ABORTED, GeneralCommanderStates.ERROR]
 | remove_object | The object name | |
 | attach_object_to_end_effector | The object name | |
 | detach_all_from_end_effector | The object name | |
+
+The object mesh file accepts absolute file path or package relative file path.
+
+#### Example: Adding a collision object
+
+The following shows an example of issuing an asynchronous move command
+```python
+arm_commander.add_object_to_scene('the_teapot', '/path_to_file/utah_teapot.stl', [0.5, 1.2, 0.3], [0, 0, 3.14])
+```
+
+### Custom Transform in the Scene
+
+| Functions | Parameters | Remarks |
+| -------- | ---------- | ------- |
+| add_custom_transform | The name, xyz, rpy and the parent_frame of the custom transform | | 
+| update_custom_transform_pose | The updated xyz, rpy or the parent frame of the named custom transform | the xyz, rpy, and the parent frame are optional|
+| remove_custom_transform| The name of the custom transform | |
 
 ### Path Constraints
 
