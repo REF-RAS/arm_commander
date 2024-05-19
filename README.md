@@ -24,12 +24,12 @@ Use the [Documentation Entry Point](http://REF-RAS.github.io/arm_commander) to b
 The arm commander presents a programming interface dedicated to robot arm manipulation and encapsulates useful but tedious programming components such as ROS and arm movement planning.  The arm commander can support the development of applications using or not using ROS. The following example uses the arm commander API to move the end-effector of the robot arm `panda_arm` to the position (0.6, 0.0, 0.4), and then move it to another position (0.4, 0.2, 0.4)
 
 ```
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
+from arm_commander.commander_moveit import GeneralCommander
 
 class ArmCommanderMoveExample():
     def __init__(self):
         # create the General Commander and wait for it being ready to service move commands
-        arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander: GeneralCommander = GeneralCommander('panda_arm')
         arm_commander.spin(spin_in_thread=True)
         arm_commander.wait_for_ready_to_move()
         # send two move commands one after another

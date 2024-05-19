@@ -14,7 +14,7 @@ __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
 import sys, threading, signal
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
+from arm_commander.commander_moveit import GeneralCommander
 import arm_commander.tools.pose_tools as pose_tools
 
 class ArmCommanderMoveExample():
@@ -22,7 +22,7 @@ class ArmCommanderMoveExample():
         # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
         # create the General Commander and wait for it being ready to service move commands
-        arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander:GeneralCommander = GeneralCommander('panda_arm')
         arm_commander.spin(spin_in_thread=True)
         arm_commander.wait_for_ready_to_move()
         self.arm_commander = arm_commander

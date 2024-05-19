@@ -16,7 +16,7 @@ __status__ = 'Development'
 
 import sys, copy, threading, time, signal
 
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
+from arm_commander.commander_moveit import GeneralCommander, logger
 
 class ArmCommanderDisplayInfo():
 
@@ -24,7 +24,7 @@ class ArmCommanderDisplayInfo():
         # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
         logger.info(f'Creating the General Commander')
-        self.arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander:GeneralCommander = GeneralCommander('panda_arm')
         arm_commander = self.arm_commander
         
         self.the_thread = threading.Thread(target=self.arm_commander.spin, daemon=True)

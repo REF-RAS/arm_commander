@@ -19,7 +19,7 @@ from geometry_msgs.msg import Pose, PoseStamped, Twist
 from arm_commander.states import ControllerState, GeneralCommanderStates
 import arm_commander.tools.moveit_tools as moveit_tools
 import arm_commander.tools.pose_tools as pose_tools
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory, logger
+from arm_commander.commander_moveit import GeneralCommander, logger
 
 class GeneralCommanderDemo():
     """ A demo program for the :class:'GeneralCommander', which illustrates the movement commands offered by 
@@ -41,8 +41,8 @@ class GeneralCommanderDemo():
             logger.error(f'Error in loading demo config file {config_file}')
             raise
         # TODO: config input to factory for group name and base
-        self.arm_commander: GeneralCommander = GeneralCommanderFactory.get_object(self.demo_config['moveit_group_name'])
-        # self.arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('xarm7', 'link_base')
+        self.arm_commander:GeneralCommander = GeneralCommander(self.demo_config['moveit_group_name'])
+        # self.arm_commander:GeneralCommander = GeneralCommander('xarm7', 'link_base')
         # self.arm_servo: CommanderServo = CommanderServo(moveit_group_name='xarm7', world_link='link_base')
         self.arm_commander.spin(spin_in_thread=True)
         
@@ -295,7 +295,6 @@ class GeneralCommanderDemo():
                     break
                 time.sleep(0.1)
             logger.info(f'the commander has completed with the result: {the_state} {the_state.message}')
-            # logger.info(f'Final result: {arm_commander.get_latest_moveit_feedback()}')
             arm_commander.reset_state() 
             logger.info(f'=== Test 2: Finished')
             

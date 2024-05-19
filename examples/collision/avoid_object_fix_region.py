@@ -13,8 +13,8 @@ __version__ = '0.0.1'
 __email__ = 'robotics.ref@qut.edu.au'
 __status__ = 'Development'
 
-import sys, signal
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
+import sys, signal, time
+from arm_commander.commander_moveit import GeneralCommander
 import arm_commander.tools.moveit_tools as moveit_tools
 import arm_commander.tools.pose_tools as pose_tools
 
@@ -27,7 +27,7 @@ class ArmCommanderCollisionAvoidExample():
         # rospy.init_node('moveit_general_commander_node', anonymous=False)
         signal.signal(signal.SIGINT, self.stop)
         # create the General Commander and wait for it being ready to service move commands
-        arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander:GeneralCommander = GeneralCommander('panda_arm')
         arm_commander.spin(spin_in_thread=True)
         arm_commander.reset_world()  # to remove any workspace or object previously defined
         arm_commander.wait_for_ready_to_move()
@@ -65,6 +65,9 @@ class ArmCommanderCollisionAvoidExample():
         arm_commander.reset_state()    
         
         arm_commander.clear_path_constraints()     
+
+        time.sleep(5)
+        
                     
     def stop(self, *args, **kwargs):
         self.arm_commander.abort_move()

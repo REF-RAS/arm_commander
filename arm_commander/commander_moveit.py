@@ -15,21 +15,22 @@ __status__ = 'Development'
 
 import sys, copy, threading, time, signal, math, traceback, timeit, numbers, logging
 from collections import defaultdict
-import rospy, tf
+import rospy, tf, tf2_ros, tf2_geometry_msgs
 from tf2_msgs.msg import TFMessage
 import moveit_commander
 import moveit_commander.conversions as conversions
+from std_msgs.msg import Header
 from moveit_msgs.msg import MoveGroupActionFeedback, MoveGroupActionResult, MoveItErrorCodes, ExecuteTrajectoryActionResult
 from moveit_msgs.msg import PlanningScene, ObjectColor 
 from moveit_msgs.msg import Constraints, OrientationConstraint, JointConstraint, PositionConstraint
 from actionlib_msgs.msg import GoalStatus
-from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped
+from geometry_msgs.msg import Pose, PoseStamped, Twist, TwistStamped, TransformStamped
 from controller_manager_msgs.srv import SwitchController
 
 from arm_commander.tools.moveit_tools import MOVEIT_ERROR_CODE_MAP, GOAL_STATUS_MAP
 from arm_commander.tools.rospkg_tools import PackageFile
+import arm_commander.tools.pose_tools as pose_tools
 from arm_commander.states import GeneralCommanderStates, ControllerState
-
 
 class GeneralCommander():
     """
@@ -39,14 +40,13 @@ class GeneralCommander():
     .. codeauthor:: Andrew Lui
     .. sectionauthor:: Andrew Lui
     """
-    def __init__(self, moveit_group_name:str, world_link:str=None) -> None:
+    def __init__(self, moveit_group_name:str, fixed_frame:str=None) -> None:
         """ Constructor of GeneralCommander. 
-        Using the :class: 'commander_moveit.GeneralCommanderFactory' is recommended
 
         :param moveit_group_name: [description], the name of the manipulator defined in the moveit setup 
         :type moveit_group_name: str
-        :param world_link: [description], the link name used as the frame of reference in moveit 
-        :type world_link: str, optional
+        :param fixed_frame: [description], the fixed frame of reference in moveit 
+        :type fixed_frame: str, optional
         """
         # check if a ROS node has been initialized 
         node_uri = rospy.get_node_uri()
@@ -61,8 +61,8 @@ class GeneralCommander():
         # create lock for synchronization
         self.action_lock = threading.Lock()
         # define constants (should import from config)
-        self.TF_PUB_RATE = rospy.get_param('tf_rate', 10)  # default to 10 Hz
-        self.CARTE_PLANNING_STEP_SIZE = rospy.get_param('step_size', 0.01)  # meters
+        self.TF_PUB_RATE = rospy.get_param('general_commander/tf_rate', 10)  # default to 10 Hz
+        self.CARTE_PLANNING_STEP_SIZE = rospy.get_param('general_commander/step_size', 0.01)  # meters
         self.GROUP_NAME = moveit_group_name
         # initialize move_it variables 
         self.robot = moveit_commander.RobotCommander()
@@ -74,10 +74,10 @@ class GeneralCommander():
             raise
         # initialize the world_link as the default planning frame
         self.END_EFFECTOR_LINK = self.move_group.get_end_effector_link()
-        if world_link is not None:
-            self.WORLD_REFERENCE_LINK = world_link
-            rospy.loginfo(f'The default reference frame changed from {self.move_group.get_planning_frame()} to {world_link}')
-            self.move_group.set_pose_reference_frame(world_link)
+        if fixed_frame is not None:
+            self.WORLD_REFERENCE_LINK = fixed_frame
+            rospy.loginfo(f'The default reference frame changed from {self.move_group.get_planning_frame()} to {fixed_frame}')
+            self.move_group.set_pose_reference_frame(fixed_frame)
         else:
             self.WORLD_REFERENCE_LINK = self.move_group.get_planning_frame()
             rospy.loginfo(f'The default reference frame is {self.WORLD_REFERENCE_LINK}')            
@@ -100,8 +100,9 @@ class GeneralCommander():
         self.custom_transform_object_dict = defaultdict(lambda: None)
         # publisher for the planning scene
         self.scene_pub = rospy.Publisher('planning_scene', PlanningScene, queue_size=10)
-        self.tf_pub = tf.TransformBroadcaster()
-        self.tf_listener = tf.TransformListener()
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         # the constraints
         self.the_constraints = Constraints()
         self.the_constraints.name = 'commander'
@@ -155,21 +156,38 @@ class GeneralCommander():
         :param frame: the frame against which the pose is defined, ignored if PoseStamped is provided, defaults to None
         :type frame: str, optional
         """
-        if type(pose) == Pose:
-            pose = conversions.pose_to_list(pose)
-        elif type(pose) == PoseStamped:
-            frame = pose.header.frame_id            
-            pose = conversions.pose_to_list(pose.pose)
-        xyz = pose[:3]
-        if type(pose) != list:
-            rospy.logerr(f'{__class__.__name__}: parameter (pose) is not list of length 6 or 7 or a Pose object -> fix the parameter at behaviour construction')
-            raise TypeError(f'A parameter is invalid')  
-        if len(pose) == 6:
-            q = tf.transformations.quaternion_from_euler(*pose[3:])
-        elif len(pose) == 7:
-            q = pose[3:]
         frame = self.WORLD_REFERENCE_LINK if frame is None else frame
-        self.tf_pub.sendTransform(xyz, q, rospy.Time.now(), name, frame)
+        if type(pose) in [list, tuple]:
+            pose_stamped = pose_tools.list_to_pose_stamped(pose, frame)
+        elif type(pose) == Pose:
+            pose_stamped = PoseStamped()
+            pose_stamped.header.frame_id = frame
+            pose_stamped.header.stamp = rospy.Time.now()
+            pose_stamped.pose = pose
+        elif type(pose) == PoseStamped:
+            frame = pose.header.frame_id
+            pose_stamped = pose
+        else:
+            rospy.logerr(f'{__class__.__name__}: parameter (pose) is not list of length 6 or 7 or a Pose object -> fix the parameter at behaviour construction')
+            raise TypeError(f'A parameter is invalid')
+        self.tf_broadcaster.sendTransform(pose_tools.pose_stamped_to_transform_stamped(pose_stamped, name))
+        
+        # if type(pose) == Pose:
+        #     pose = conversions.pose_to_list(pose)
+        # elif type(pose) == PoseStamped:
+        #     frame = pose.header.frame_id            
+        #     pose = conversions.pose_to_list(pose.pose)
+        # xyz = pose[:3]
+        # if type(pose) != list:
+        #     rospy.logerr(f'{__class__.__name__}: parameter (pose) is not list of length 6 or 7 or a Pose object -> fix the parameter at behaviour construction')
+        #     raise TypeError(f'A parameter is invalid')  
+        # if len(pose) == 6:
+        #     q = tf.transformations.quaternion_from_euler(*pose[3:])
+        # elif len(pose) == 7:
+        #     q = pose[3:]
+        # frame = self.WORLD_REFERENCE_LINK if frame is None else frame
+        # pose_tools.pose_stamped_to_transform_stamped
+        # self.tf_pub.sendTransform(xyz, q, rospy.Time.now(), name, frame)
 
     # internal callback functions for moveit commander message after a move group action
     def _cb_move_group_result(self, msg:MoveGroupActionResult):
@@ -244,15 +262,6 @@ class GeneralCommander():
         if print:
             rospy.loginfo(output)
         return output
-    
-    # reveals the latest action feedback of the last call to move_group
-    def get_latest_moveit_feedback(self) -> MoveGroupActionFeedback:
-        """Get the latest feedback resulting from the last command
-
-        :return: The latest action feedback of the last call to the underlying move commander
-        :rtype: MoveGroupActionFeedback
-        """
-        return self.cached_result
 
     # returns the name of the end effector link defined in move_group
     def get_end_effector_link(self) -> str:
@@ -285,6 +294,10 @@ class GeneralCommander():
             rospy.loginfo(self.commander_state.name)
         return self.commander_state
     
+
+    def get_latest_moveit_feedback(self):
+        rospy.logwarn(f'GeneralCommander.get_latest_moveit_feedback has been phased out')
+
     # reveals the error code of the latest action of the move_group 
     def get_error_code(self, print=False) -> MoveItErrorCodes:
         """Get the error code of resulting from the last command
@@ -329,11 +342,11 @@ class GeneralCommander():
         return joint_values        
     
     # returns the pose (as xyzq list of 7 floats) of a link (link_name) in a frame of reference (reference_frame)
-    def pose_in_frame_as_xyzq(self, link_name:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
+    def pose_in_frame_as_xyzq(self, query_frame:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
         """ Get the pose of a link as a list of 7 floats (xyzq)
 
-        :param link_name: The name of the link to be queried, defaults to the end-effector
-        :type link_name: str, optional
+        :param query_frame: The name of the frame to be queried, defaults to the end-effector
+        :type query_frame: str, optional
         :param reference_frame: The name of the frame of reference, defaults to the world/default
         :type reference_frame: str, optional
         :param ros_time: The time when the pose is queried, defaults to current time
@@ -344,29 +357,19 @@ class GeneralCommander():
         :return: The pose in the format of a list of 7 floats (xyzq)
         :rtype: list
         """
-        link_name = self.END_EFFECTOR_LINK if link_name is None else link_name
-        ros_time = rospy.Time(0) if ros_time is None else ros_time
-        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
-        try:
-            self.tf_listener.waitForTransform(reference_frame, link_name, rospy.Time.now(), rospy.Duration(5.0))
-            (trans, q) = self.tf_listener.lookupTransform(reference_frame, link_name, rospy.Time(0))
-            if print: 
-                if reference_frame is None:
-                    reference_frame = self.WORLD_REFERENCE_LINK
-        except (tf.LookupException, tf.ConnectivityException) as e:
-            rospy.logerr(f'Invalid parameter or TF error: {e}')
-            raise
-        except tf.ExtrapolationException as e:
-            rospy.logerr(f'Extrapolation error: {e}')
-            raise
-        return trans + q
+        query_frame = self.END_EFFECTOR_LINK if query_frame is None else query_frame
+        pose = self.pose_in_frame(query_frame, reference_frame, ros_time)
+        xyzq = pose_tools.pose_to_xyzq(pose.pose)
+        if print: 
+            rospy.loginfo(f'Frame {query_frame} tranformed into {reference_frame}: {xyzq} ')
+        return xyzq
     
     # returns the pose (as xyzrpy list of 6 floats) of a link (link_name) in a frame of reference (reference_frame)    
-    def pose_in_frame_as_xyzrpy(self, link_name:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
+    def pose_in_frame_as_xyzrpy(self, query_frame:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
         """ Get the pose of a link as a list of 6 floats (xyzrpy)
 
-        :param link_name: The name of the link to be queried, defaults to the end-effector
-        :type link_name: str, optional
+        :param query_frame: The name of the frame to be queried, defaults to the end-effector
+        :type query_frame: str, optional
         :param reference_frame: The name of the frame of reference, defaults to the world/default
         :type reference_frame: str, optional
         :param ros_time: The time when the pose is queried, defaults to current time
@@ -377,22 +380,19 @@ class GeneralCommander():
         :return: The pose in the format of a list of 6 floats (xyzrpy)
         :rtype: list
         """
-        link_name = self.END_EFFECTOR_LINK if link_name is None else link_name
-        pose = self.pose_in_frame_as_xyzq(link_name, reference_frame, ros_time)
-        xyzrpy = pose[:3]
-        xyzrpy.extend(tf.transformations.euler_from_quaternion(pose[3:]))
+        query_frame = self.END_EFFECTOR_LINK if query_frame is None else query_frame
+        pose = self.pose_in_frame(query_frame, reference_frame, ros_time)
+        xyzrpy = pose_tools.pose_to_xyzrpy(pose.pose)
         if print: 
-            if reference_frame is None:
-                reference_frame = self.WORLD_REFERENCE_LINK
-            rospy.loginfo(f'pose of {link_name} from {reference_frame}: {xyzrpy}')
+            rospy.loginfo(f'Frame {query_frame} tranformed into {reference_frame}: {xyzrpy} ')
         return xyzrpy
     
     # returns the pose (as PoseStamped) of a link (link_name) in a frame of reference (reference_frame)
-    def pose_in_frame(self, link_name:str=None, reference_frame:str=None, ros_time:rospy.Time=None) -> PoseStamped:
+    def pose_in_frame(self, query_frame:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print:bool=False) -> PoseStamped:
         """ Get the pose of a link as a PoseStamped
 
-        :param link_name: The name of the link to be queried, defaults to the end-effector
-        :type link_name: str, optional
+        :param query_frame: The name of the input frame that is to be transformed into the reference frame, default to end-effector
+        :type query_frame: str, optional
         :param reference_frame: The name of the frame of reference, defaults to the world/default
         :type reference_frame: str, optional
         :param ros_time: The time when the pose is queried, defaults to current time
@@ -401,10 +401,19 @@ class GeneralCommander():
         :return: The pose as a PoseStamped
         :rtype: PoseStamped
         """
-        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame        
-        link_name = self.END_EFFECTOR_LINK if link_name is None else link_name
-        xyzq = self.pose_in_frame_as_xyzq(link_name, reference_frame, ros_time)
-        return conversions.list_to_pose_stamped(xyzq, reference_frame)
+        query_frame = self.END_EFFECTOR_LINK if query_frame is None else query_frame
+        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame     
+        # reference frame is the target frame to which the query frame is to be transformed
+        transform:TransformStamped
+        try:
+            transform = self.tf_buffer.lookup_transform_full(reference_frame, rospy.Time(), query_frame, rospy.Time(), self.WORLD_REFERENCE_LINK, rospy.Duration(0.5))
+            pose_stamped = pose_tools.transform_to_pose_stamped(transform)
+        except Exception as e:
+            rospy.logerr(f'Invalid parameter or TF error: {e}')
+            raise
+        if print: 
+            rospy.loginfo(f'Frame {query_frame} tranformed into {reference_frame}: {pose_stamped} ')
+        return pose_stamped
     
     # returns the pose (as Pose) of a link (link_name) of the default move_group planning frame
     def pose_of_robot_link(self, robot_link_name:str=None, print=False) -> PoseStamped:
@@ -475,8 +484,8 @@ class GeneralCommander():
         :rtype: PoseStamped
         """
         try: 
-            self.tf_listener.waitForTransform(to_frame, the_pose.header.frame_id, rospy.Time.now(), rospy.Duration(1.0))
-            transformed_pose = self.tf_listener.transformPose(to_frame, the_pose)
+            transform = self.tf_buffer.lookup_transform(to_frame, the_pose.header.frame_id, the_pose.header.stamp, rospy.Duration(1))
+            transformed_pose = tf2_geometry_msgs.do_transform_pose(the_pose, transform)
         except tf.ExtrapolationException as e:
             rospy.logerr(f'Extrapolation exception received: {e}')
             raise
@@ -1406,20 +1415,23 @@ class GeneralCommanderFactory():
     one object for each manipulator
     """
     object_store = dict()
-    def get_object(moveit_group_name:str, world_link:str=None) -> GeneralCommander:
+    def get_object(moveit_group_name:str, fixed_frame:str=None) -> GeneralCommander:
         """ Returns, and if needed, creates an general commander for the given moveit_group_name, 
         a manipulation group defined in the setup assistant (or the custom.env file)
 
         :param moveit_group_name: The name of the manipulation group
         :type moveit_group_name: str
-        :param world_link: the frame of reference for planning, defaults to the world defined in the moveit configuraiton
-        :type world_link: str, optional
+        :param fixed_frame: the frame of reference for planning, defaults to the world defined in the moveit configuraiton
+        :type fixed_frame: str, optional
         :return: The general commander for the manipulation group
         :rtype: GeneralCommander
         """
+        rospy.logwarn(f'GeneralCommanderFactory will be phased out.')
+        rospy.logwarn(f'The GeneralCommander should be created directly through constructor.')
+        rospy.logwarn(f'-> the_commander = GeneralCommander({moveit_group_name}, {fixed_frame}).')
         if moveit_group_name in GeneralCommanderFactory.object_store:
             return GeneralCommanderFactory.object_store[moveit_group_name]
-        the_commander = GeneralCommander(moveit_group_name, world_link)
+        the_commander = GeneralCommander(moveit_group_name, fixed_frame)
         GeneralCommanderFactory.object_store[moveit_group_name] = the_commander
         return the_commander
     

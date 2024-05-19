@@ -13,16 +13,6 @@ This page provides a summary of the API. Refer to the [Full API Reference](arm_c
 
 The **Arm Commander** is a Python object of the class `GeneralCommander` that represents the commander of a particular __arm__ or manipulation device. An application can use more than one `GeneralCommander` object if a robot arm platform comprising multiple manipulators.
 
-### Factory for Creating Arm Commander
-
-The function `get_object` of the class `GeneralCommanderFactory` returns the __singleton__ `GeneralCommander` object for a particular manipulator name. The current version is coupled with Moveit 1 and the moveit group name is to be provided to the factory. 
-
-#### GeneralCommanderFactory
-
-| Function | Parameters | Remarks |
-| -------- | ---------- | ------- |
-| get_object | The manipulator group name and optionally the name of the world reference frame | |
-
 ### System Parameters
 
 | Functions | Parameters | Remarks |
@@ -61,7 +51,6 @@ The function `get_object` of the class `GeneralCommanderFactory` returns the __s
 
 | Functions | Parameters | Remarks |
 | -------- | ---------- | ------- |
-| get_latest_moveit_feedback |  | Returns the latest `MoveGroupActionFeedback` received |
 | get_error_code |  | Returns the latest error code received |
 
 
@@ -69,7 +58,7 @@ The function `get_object` of the class `GeneralCommanderFactory` returns the __s
 
 The following shows the essential `GeneralCommander` startup sequence in applications.
 ```python
-arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+arm_commander:GeneralCommander = GeneralCommander('panda_arm')
 arm_commander.spin(spin_in_thread=True)
 arm_commander.wait_for_ready_to_move()
 ```

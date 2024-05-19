@@ -20,7 +20,7 @@ Example programs are provided for illustrating how to use the **general arm comm
 ## Programming Essentials
 
 The essential Python modules are found in the following three files.
-- `commander_moveit.py`: defines main classes including the `GeneralCommander` and the factory class `GeneralCommanderFactory`.
+- `commander_moveit.py`: defines main classes including the `GeneralCommander`.
 - `states.py`: defines the key `Enum` classes for state management.
 - `moveit_tools.py`: defines utility and helper functions.
 
@@ -29,7 +29,7 @@ The essential Python modules are found in the following three files.
 To use the Python arm_commander interface, import the modules in the concerned Python program file as below.
 
 ```python
-from arm_commander.commander_moveit import GeneralCommander, GeneralCommanderFactory
+from arm_commander.commander_moveit import GeneralCommander
 from arm_commander.states import ControllerState, GeneralCommanderStates
 import arm_commander.moveit_tools as moveit_tools
 ```
@@ -43,7 +43,7 @@ The program file `move/simple_move_1.py` illustrates the essentials of programmi
 The string parameter `panda_arm` specifies the __move_group__ as defined in the robot arm configuration (`panda_moveit_config`).
 
 ```python
-arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+arm_commander:GeneralCommander = GeneralCommander('panda_arm')
 arm_commander.spin(spin_in_thread=True)
 arm_commander.wait_for_ready_to_move()
 ```
@@ -62,7 +62,7 @@ Alternatively, the client can create a new thread and use it to execute the spin
 class ArmCommanderMoveExample():
     def __init__(self):
         ...
-        arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander:GeneralCommander = GeneralCommander('panda_arm')
         self.arm_commander = arm_commander
         self.the_thread = threading.Thread(target=self.spin_commander, daemon=True)
         self.the_thread.start()
@@ -81,7 +81,7 @@ class ArmCommanderMoveExample():
     def __init__(self):
         ...
         signal.signal(signal.SIGINT, self.stop)
-        arm_commander: GeneralCommander = GeneralCommanderFactory.get_object('panda_arm')
+        arm_commander: GeneralCommander = GeneralCommander('panda_arm')
         self.arm_commander = arm_commander
         ...
 
