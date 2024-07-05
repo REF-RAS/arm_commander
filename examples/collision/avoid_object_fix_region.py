@@ -43,7 +43,7 @@ class ArmCommanderCollisionAvoidExample():
         arm_commander.add_sphere_to_scene('the_sphere', 0.05, [0.4, 0.0, 0.4])   
 
         # add an positional path constraint to restrict the end-effector to move within the bbox below, which is the nearer side of the object
-        allowed_bbox = [0.1, -0.3, 0.3, 0.5, +0.3, 0.6]
+        allowed_bbox = [0.0, -0.3, 0.3, 0.6, +0.3, 0.9]
         arm_commander.add_path_constraints(moveit_tools.create_position_constraint_from_bbox(arm_commander.get_end_effector_link(), 
                     arm_commander.get_world_reference_frame(), allowed_bbox))
         
