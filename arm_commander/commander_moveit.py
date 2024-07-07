@@ -327,11 +327,11 @@ class GeneralCommander():
         return joint_values        
     
     # returns the pose (as xyzq list of 7 floats) of a link (link_name) in a frame of reference (reference_frame)
-    def pose_in_frame_as_xyzq(self, query_frame:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
+    def pose_in_frame_as_xyzq(self, query_link:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
         """ Get the pose of a link as a list of 7 floats (xyzq)
 
-        :param query_frame: The name of the frame to be queried, defaults to the end-effector
-        :type query_frame: str, optional
+        :param query_link: The name of the frame to be queried, defaults to the end-effector
+        :type query_link: str, optional
         :param reference_frame: The name of the frame of reference, defaults to the world/default
         :type reference_frame: str, optional
         :param ros_time: The time when the pose is queried, defaults to current time
@@ -342,19 +342,19 @@ class GeneralCommander():
         :return: The pose in the format of a list of 7 floats (xyzq)
         :rtype: list
         """
-        query_frame = self.END_EFFECTOR_LINK if query_frame is None else query_frame
-        pose = self.pose_in_frame(query_frame, reference_frame, ros_time)
+        query_link = self.END_EFFECTOR_LINK if query_link is None else query_link
+        pose = self.pose_in_frame(query_link, reference_frame, ros_time)
         xyzq = pose_tools.pose_to_xyzq(pose.pose)
         if print: 
-            rospy.loginfo(f'Frame {query_frame} tranformed into {reference_frame}: {xyzq} ')
+            rospy.loginfo(f'Frame {query_link} tranformed into {reference_frame}: {xyzq} ')
         return xyzq
     
     # returns the pose (as xyzrpy list of 6 floats) of a link (link_name) in a frame of reference (reference_frame)    
-    def pose_in_frame_as_xyzrpy(self, query_frame:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
+    def pose_in_frame_as_xyzrpy(self, query_link:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print=False) -> list:
         """ Get the pose of a link as a list of 6 floats (xyzrpy)
 
-        :param query_frame: The name of the frame to be queried, defaults to the end-effector
-        :type query_frame: str, optional
+        :param query_link: The name of the frame to be queried, defaults to the end-effector
+        :type query_link: str, optional
         :param reference_frame: The name of the frame of reference, defaults to the world/default
         :type reference_frame: str, optional
         :param ros_time: The time when the pose is queried, defaults to current time
@@ -365,19 +365,19 @@ class GeneralCommander():
         :return: The pose in the format of a list of 6 floats (xyzrpy)
         :rtype: list
         """
-        query_frame = self.END_EFFECTOR_LINK if query_frame is None else query_frame
-        pose = self.pose_in_frame(query_frame, reference_frame, ros_time)
+        query_link = self.END_EFFECTOR_LINK if query_link is None else query_link
+        pose = self.pose_in_frame(query_link, reference_frame, ros_time)
         xyzrpy = pose_tools.pose_to_xyzrpy(pose.pose)
         if print: 
-            rospy.loginfo(f'Frame {query_frame} tranformed into {reference_frame}: {xyzrpy} ')
+            rospy.loginfo(f'Frame {query_link} tranformed into {reference_frame}: {xyzrpy} ')
         return xyzrpy
     
     # returns the pose (as PoseStamped) of a link (link_name) in a frame of reference (reference_frame)
-    def pose_in_frame(self, query_frame:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print:bool=False) -> PoseStamped:
+    def pose_in_frame(self, query_link:str=None, reference_frame:str=None, ros_time:rospy.Time=None, print:bool=False) -> PoseStamped:
         """ Get the pose of a link as a PoseStamped
 
-        :param query_frame: The name of the input frame that is to be transformed into the reference frame, default to end-effector
-        :type query_frame: str, optional
+        :param query_link: The name of the input frame that is to be transformed into the reference frame, default to end-effector
+        :type query_link: str, optional
         :param reference_frame: The name of the frame of reference, defaults to the world/default
         :type reference_frame: str, optional
         :param ros_time: The time when the pose is queried, defaults to current time
@@ -386,18 +386,18 @@ class GeneralCommander():
         :return: The pose as a PoseStamped
         :rtype: PoseStamped
         """
-        query_frame = self.END_EFFECTOR_LINK if query_frame is None else query_frame
+        query_link = self.END_EFFECTOR_LINK if query_link is None else query_link
         reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame     
         # reference frame is the target frame to which the query frame is to be transformed
         transform:TransformStamped
         try:
-            transform = self.tf_buffer.lookup_transform_full(reference_frame, rospy.Time(), query_frame, rospy.Time(), self.WORLD_REFERENCE_LINK, rospy.Duration(0.5))
+            transform = self.tf_buffer.lookup_transform_full(reference_frame, rospy.Time(), query_link, rospy.Time(), self.WORLD_REFERENCE_LINK, rospy.Duration(0.5))
             pose_stamped = pose_tools.transform_to_pose_stamped(transform)
         except Exception as e:
             rospy.logerr(f'Invalid parameter or TF error: {e}')
             raise
         if print: 
-            rospy.loginfo(f'Frame {query_frame} tranformed into {reference_frame}: {pose_stamped} ')
+            rospy.loginfo(f'Frame {query_link} tranformed into {reference_frame}: {pose_stamped} ')
         return pose_stamped
     
     # returns the pose (as Pose) of a link (link_name) of the default move_group planning frame

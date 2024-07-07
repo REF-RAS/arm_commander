@@ -103,6 +103,7 @@ The `wait` parameter is another common feature that specifies the call is asynch
 | move_displacement | The dx, dy, and dz | cartesian path |
 | move_to_position | The target x, y, and z, the reference frame, and path planning | |
 | rotate_to_orientation | The target roll, pitch, and yaw, the reference frame, and path planning | |
+| move_and_rotate | The target x, y, z, roll, pitch, and yaw, the reference frame, and path planning | |
 | move_to_pose | Pose, PoseStamped, a 6-list (xyzrpy) or a 7-list (xyzqqqq) | |
 
 The following functions accepts multiple positions or poses in one move command. The path is always cartesian.

@@ -177,7 +177,6 @@ arm_commander.move_to_position(x = 0.4, y = 0.2, wait=True)
 arm_commander.reset_state()
 ```
 
-
 ### Move using a displacement
 
 The function `move_displacement()` commands the robot arm to move based on a displacement from the current position. The following source code is from `simple_move_4.py`.  The end-effector will move 10 cm ten times.
@@ -196,6 +195,8 @@ arm_commander.reset_state()
 The default values of the three component parameters are the current values.
 
 ### Move to Both Position and Orientation
+
+There are two functions for moving to a both specified position and orientation.  
 
 The function `move_pose()` commands the end-effector to move to a target pose, which can be of type `Pose` or `PoseStamped`. 
 ```python
@@ -225,8 +226,9 @@ xyzrpy = [0.4, 0.0, 0.4, 3.14, 0.0, 0.6]
 arm_commander.move_to_pose(xyzrpy, wait=True)
 arm_commander.reset_state() 
 ```
-
 ![Animation of the Movement](../assets/ArmCommander-SimpleMove5.gif)
+
+However, the function `move_pose()` accepts only fully specified pose. On the other hand, the function `move_and_rotate()` supports partially specified xyzrpy, and the unspecified components are defaulted to the current values.
 
 ### Cartesian Movement
 
