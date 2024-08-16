@@ -551,6 +551,23 @@ class GeneralCommander():
         :type tol_list: list
         """
         self.move_group.set_goal_tolerance(tol_list) 
+
+    # set the move group end effector link
+    def set_end_effector_link(self, new_link:str = None):
+        if new_link is None:
+            rospy.logwarn(f"Provided link is NONE. Exiting unchanged")
+            return
+
+        # Debugging output for current end-effector 
+        rospy.loginfo(f"Current end effector configured: {self.move_group.get_end_effector_link()}")
+
+        # Set the new link (if valid)
+        # NOTE: error's out if link is invalid
+        # TODO: update to check a list of valid links prior to updating
+        self.move_group.set_end_effector_link(new_link)
+        self.END_EFFECTOR_LINK = self.move_group.get_end_effector_link()
+        
+        rospy.loginfo(f"Updated end-effector link is: {self.END_EFFECTOR_LINK}")
     
     # return a list of current joint, position and orientation goal tolerances
     def get_goal_tolerance(self) -> list:
