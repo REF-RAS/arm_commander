@@ -32,6 +32,8 @@ from arm_commander.tools.rospkg_tools import PackageFile
 import arm_commander.tools.pose_tools as pose_tools
 from arm_commander.states import GeneralCommanderStates, ControllerState
 
+from moveit_calibration_detector.srv import TargetDimension, IsTargetDetected
+
 class GeneralCommander():
     """
     GeneralCommander: an interface for robot commander, with this class specifically interfacing
@@ -192,12 +194,15 @@ class GeneralCommander():
                 self.commander_state.message = 'NO ERROR'
                 return
             elif msg.status.status in [GoalStatus.ABORTED]:
-                 self.commander_state = GeneralCommanderStates.ABORTED 
-                 rospy.logerr(f'The commander: received ABORTED result')
+                self.commander_state = GeneralCommanderStates.ABORTED 
+                rospy.logerr(f'The commander: received ABORTED result')
+                self.abort_move()
+                rospy.logerr(f'The commander: the previous goal has been preempted - abort_move() called in-case move was called asynchrously and goal preemption was external')
             elif msg.status.status in [GoalStatus.PREEMPTED]:
                 # just ignore the preempted goal - should not happen (TODO: assumption is wrong)
                 self.commander_state = GeneralCommanderStates.ABORTED 
-                rospy.logerr(f'The commander: the previous goal has been preempted')
+                self.abort_move()
+                rospy.logerr(f'The commander: the previous goal has been preempted - abort_move() called in-case move was called asynchrously and goal preemption was external')
             else:
                 self.commander_state = GeneralCommanderStates.ERROR       
             self.commander_state.message = MOVEIT_ERROR_CODE_MAP[msg.result.error_code.val]
@@ -509,6 +514,7 @@ class GeneralCommander():
         self.move_group.clear_pose_targets()
         if wait:
             self.wait_for_busy_end()
+        self.reset_state()
         
     # a blocking call to wait until the current command has left the BUSY state
     def wait_for_busy_end(self) -> GeneralCommanderStates:
@@ -1181,6 +1187,30 @@ class GeneralCommander():
         self._pub_transform_object(object_name, object_pose) 
         
     # add a box (a box of given dimension, position and orientation)    
+    def add_box_to_scene_by_pose(self, object_name:str, dimensions:list, pose:Pose, reference_frame:str=None, rgba=None) -> None:
+        """ Add a box to the scene for collision avoidance in path planning
+        
+        :param object_name: The name given to the new scene object
+        :type object_name: str
+        :param dimensions: The dimensions of the box as a list of 3 floats
+        :type radius: list
+        :param pose: The Pose of the box center
+        :type pose: Pose
+        :param reference_frame: The frame of reference of the xyz and rpy
+        :type reference_frame: str, default to WORLD_REFERENCE_LINK     
+        """
+        reference_frame = self.WORLD_REFERENCE_LINK if reference_frame is None else reference_frame
+        object_pose = PoseStamped()
+        object_pose.pose.position = pose.position
+        object_pose.pose.orientation = pose.orientation
+        object_pose.header.frame_id = reference_frame
+        object_pose.header.stamp = rospy.Time.now()
+        self.scene.add_box(object_name, object_pose, size=dimensions)
+        self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
+        self.object_name_color_list[object_name] = rgba
+        self._pub_transform_object(object_name, object_pose, reference_frame)      
+
+    # add a box (a box of given dimension, position and orientation)    
     def add_box_to_scene(self, object_name:str, dimensions:list, xyz:list, rpy:list=[0, 0, 0], reference_frame:str=None, rgba=None) -> None:
         """ Add a box to the scene for collision avoidance in path planning
         
@@ -1201,6 +1231,192 @@ class GeneralCommander():
         self._wait_for_scene_update(lambda: object_name in self.scene.get_known_object_names())
         self.object_name_color_list[object_name] = rgba
         self._pub_transform_object(object_name, object_pose, reference_frame)      
+
+    def set_charuco_detector_params(self, longest_board_size:float=0.1970, measured_marker_size:float=0.0170) -> bool:
+        target_dim_srv_topic = '/handeye_target_charuco_detector/set_target_dimension'
+        rospy.wait_for_service(target_dim_srv_topic)
+        target_dim_srv = rospy.ServiceProxy(target_dim_srv_topic, TargetDimension)
+        response = target_dim_srv(longest_board_size, measured_marker_size)
+        return response.success
+
+    def is_target_visible(self, timeout:float=10.0) -> bool:
+        target_visible_srv_topic = '/handeye_target_charuco_detector/is_target_detected'
+        rospy.wait_for_service(target_visible_srv_topic)
+        target_visible_srv = rospy.ServiceProxy(target_visible_srv_topic, IsTargetDetected)
+        start_time = rospy.get_time()
+        while (rospy.get_time() - start_time < timeout) and not rospy.is_shutdown():
+            response = target_visible_srv()
+            rospy.logerr(f'Tag visible: {response.detected}, waiting {rospy.get_time() - start_time:.1f}/{timeout} seconds')
+            if response.detected:
+                return True
+            time.sleep(0.5)
+        return False
+
+    def capture_target_sequence(self, script_file:str) -> bool:
+
+        import yaml
+        # Read
+        # TODO: set the path properly
+        with open(f'/home/qcr/cgras2025_ws/src/scripts/calibration/{script_file}', newline='') as the_file:
+            joint_state_dict = yaml.safe_load(the_file)
+            joint_values = joint_state_dict['joint_values']
+            print(f"Number of locations read: {len(joint_values)}")
+
+        for idx, joint_position in enumerate(joint_values):
+            print(f"Moving to joint position {idx+1}/{len(joint_values)}: {joint_position}\n")
+
+            try:
+                self.move_to_joint_pose(joint_position)
+                # TODO: Capture the pose
+            except Exception as e:
+                print(f"Failed to move to joint position {idx+1}/{len(joint_values)}: {joint_position}")
+                print(e)
+                return False
+
+            time.sleep(1)
+
+        return True
+
+
+
+    def calibrate_tank(self, reference_frame:str=None, reference_pose:Pose=None) -> Pose:
+        self.move_to_named_pose('named_poses.stow', True)
+        center = Pose()
+
+        ## New 3 Tag Setup - Tank 1
+        tag_A_script = 'tank-1-tag-A.yaml'
+        tag_B_script = 'tank-1-tag-B.yaml'
+        tag_C_script = 'tank-1-tag-C.yaml'
+        ## New 3 Tag Setup - Tank 0
+        tag_D_script = 'tank-0-tag-D.yaml'
+        tag_E_script = 'tank-0-tag-E.yaml'
+        tag_F_script = 'tank-0-tag-F.yaml'
+
+        calibration_sequence = ()
+        tank_ready_named_pose = ''
+        tag_1 = ''
+        tag_2 = ''
+        tag_3 = ''
+        tag_1_script = ''
+        tag_2_script = ''
+        tag_3_script = ''
+
+        if reference_frame.endswith('0'):
+            tank_ready_named_pose = 'named_poses.tank-0'
+            tag_1 = 'named_poses.tag-D'
+            tag_2 = 'named_poses.tag-E'
+            tag_3 = 'named_poses.tag-F'
+
+            tag_1_script = tag_D_script
+            tag_2_script = tag_E_script
+            tag_3_script = tag_F_script
+
+        elif reference_frame.endswith('1'):
+            tank_ready_named_pose = 'named_poses.tank-1'
+            tag_1 = 'named_poses.tag-A'
+            tag_2 = 'named_poses.tag-B'
+            tag_3 = 'named_poses.tag-C'
+
+            tag_1_script = tag_A_script
+            tag_2_script = tag_B_script
+            tag_3_script = tag_C_script
+
+        # Move to Ready Pose
+        self.move_to_named_pose('named_poses.ready', True)
+
+        # Set the detector to tank tag size
+        detector_init_success = self.set_charuco_detector_params(longest_board_size=0.1970, measured_marker_size=0.0170)
+        if not detector_init_success:
+            rospy.logerr('The commander (calibrate_tank): failed to set the charuco detector parameters')
+            return center # TODO: return error code
+
+        # Move to Tank Ready Pose
+        self.move_to_named_pose(tank_ready_named_pose, True)
+
+        # Move to Tag 1
+        self.move_to_named_pose(tag_1, True)
+        # -- Ensure tag is visible
+        self.is_target_visible(timeout=10.0)
+        # -- Calibration sequence for tag_1
+        sequence_result = self.capture_target_sequence(tag_1_script)
+        if not sequence_result:
+            rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
+            # TODO: return to safe pose
+            return center
+
+        # Move to Tag 2
+        self.move_to_named_pose(tag_2, True)
+        # -- Ensure tag is visible
+        self.is_target_visible(timeout=10.0)
+        # -- Calibration sequence for tag_2
+        sequence_result = self.capture_target_sequence(tag_2_script)
+        if not sequence_result:
+            rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
+            # TODO: return to safe pose
+            return center
+
+        # Move to Tag 3
+        self.move_to_named_pose(tag_3, True)
+        # -- Ensure tag is visible
+        self.is_target_visible(timeout=10.0)
+        # -- Calibration sequence for tag_3
+        sequence_result = self.capture_target_sequence(tag_3_script)
+        if not sequence_result:
+            rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
+            # TODO: return to safe pose
+            return center
+
+        # Move to Tank Ready Pose
+        self.move_to_named_pose(tank_ready_named_pose, True)
+        self.move_to_named_pose('named_poses.stow', True)
+
+        if reference_frame.endswith('0'):
+            # lookup transform from /robot_footprint to /tank_center
+            center_tf = self.tf_buffer.lookup_transform(self.WORLD_REFERENCE_LINK, 'tank_center', rospy.Time(0), rospy.Duration(4.0))
+            center.position.x = center_tf.transform.translation.x
+            center.position.y = center_tf.transform.translation.y
+            center.position.z = center_tf.transform.translation.z
+            center.orientation.x = center_tf.transform.rotation.x
+            center.orientation.y = center_tf.transform.rotation.y
+            center.orientation.z = center_tf.transform.rotation.z
+            center.orientation.w = center_tf.transform.rotation.w
+
+            print(f'Calibrating tank {reference_frame} with WORLD_REFERENCE_LINK {self.WORLD_REFERENCE_LINK} and center: {center}')
+            #input('Press Enter to continue...')
+
+            #center.position.x = -0.029
+            #center.position.y = -1.184
+            #center.position.z = 0.197
+            #center.orientation.x = 0.009
+            #center.orientation.y = 0.003
+            #center.orientation.z = 0.999
+            #center.orientation.w = -0.036
+            #- Rotation: in Quaternion [0.009, 0.003, 0.999, -0.036]
+        elif reference_frame.endswith('1'):
+            # lookup transform from /robot_footprint to /tank_center
+            center_tf = self.tf_buffer.lookup_transform(self.WORLD_REFERENCE_LINK, 'tank_center', rospy.Time(0), rospy.Duration(4.0))
+            center.position.x = center_tf.transform.translation.x
+            center.position.y = center_tf.transform.translation.y
+            center.position.z = center_tf.transform.translation.z
+            center.orientation.x = center_tf.transform.rotation.x
+            center.orientation.y = center_tf.transform.rotation.y
+            center.orientation.z = center_tf.transform.rotation.z
+            center.orientation.w = center_tf.transform.rotation.w
+
+            print(f'Calibrating tank {reference_frame} with WORLD_REFERENCE_LINK {self.WORLD_REFERENCE_LINK} and center: {center}')
+            #input('Press Enter to continue...')
+
+            #center.position.x = -0.006
+            #center.position.y = 1.188
+            #center.position.z = 0.218
+            #center.orientation.x = -0.000
+            #center.orientation.y = 0.000
+            #center.orientation.z = 0.007
+            #center.orientation.w = 1.000
+            #- Rotation: in Quaternion [-0.000, 0.000, 0.007, 1.000]
+
+        return center
+
         
     # returns a list of current objects that have been added to the commander
         """ Returns a list of current objects that have been added to the commander
