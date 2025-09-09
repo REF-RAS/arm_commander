@@ -15,6 +15,9 @@ __status__ = 'Development'
 
 import sys, copy, threading, time, signal, math, traceback, timeit, numbers, logging
 from collections import defaultdict
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+import tf.transformations
 import rospy, tf, tf2_ros, tf2_geometry_msgs
 from tf2_msgs.msg import TFMessage
 import moveit_commander
@@ -33,6 +36,8 @@ import arm_commander.tools.pose_tools as pose_tools
 from arm_commander.states import GeneralCommanderStates, ControllerState
 
 from moveit_calibration_detector.srv import TargetDimension, IsTargetDetected
+
+from .tank_least_squares import TankLeastSquares
 
 class GeneralCommander():
     """
@@ -1253,7 +1258,72 @@ class GeneralCommander():
             time.sleep(0.5)
         return False
 
-    def capture_target_sequence(self, script_file:str) -> bool:
+    def init_transform_listener(self):
+        print("Setting up (inside) the listener...")
+        if self.tf_buffer is None:
+            print("The listener is not set up")
+            self.tf_buffer = tf2_ros.Buffer()
+            self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+            print("The listener is NOW set up")
+
+    def get_transform_as_pose(self, tf_buffer, from_frame, to_frame):
+        try:
+            transform = tf_buffer.lookup_transform(from_frame, to_frame, rospy.Time(0), rospy.Duration(1))
+            if transform is None:
+                return None
+
+            pose = Pose()
+            pose.position.x = transform.transform.translation.x
+            pose.position.y = transform.transform.translation.y
+            pose.position.z = transform.transform.translation.z
+            pose.orientation.x = transform.transform.rotation.x
+            pose.orientation.y = transform.transform.rotation.y
+            pose.orientation.z = transform.transform.rotation.z
+            pose.orientation.w = transform.transform.rotation.w
+            print(f"The position between ({from_frame} and {to_frame}) is: {pose.position}")
+        except tf2_ros.LookupException as e:
+            rospy.logerr(f'Lookup exception received: {e}')
+            return None
+        except tf.ExtrapolationException as e:
+            rospy.logerr(f'Extrapolation exception received: {e}')
+            return None
+        return pose
+
+    def capture_joints(self):
+        print("Setting up the listener...")
+        self.init_transform_listener()
+        try:
+            object_pose = self.get_transform_as_pose(self.tf_buffer, 'camera_color_optical_frame', 'handeye_target')
+            effector_pose = self.get_transform_as_pose(self.tf_buffer, 'base_link', 'tool0')
+        except tf.ExtrapolationException as e:
+            rospy.logerr(f'Extrapolation exception received: {e}')
+            return
+
+        if object_pose is None or effector_pose is None:
+            return
+
+        T_obj_xyz = np.array([object_pose.position.x, object_pose.position.y, object_pose.position.z])
+        obj_rpy = tf.transformations.euler_from_quaternion([object_pose.orientation.x, object_pose.orientation.y, object_pose.orientation.z, object_pose.orientation.w])
+        T_obj_rpy = np.array(obj_rpy)
+        T_obj = np.eye(4)
+        T_obj[:3, 3] = T_obj_xyz
+        r = R.from_euler('xyz', T_obj_rpy)
+        T_obj[:3, :3] = r.as_matrix()
+
+        T_eff_xyz = np.array([effector_pose.position.x, effector_pose.position.y, effector_pose.position.z])
+        eff_rpy = tf.transformations.euler_from_quaternion([effector_pose.orientation.x, effector_pose.orientation.y, effector_pose.orientation.z, effector_pose.orientation.w])
+        T_eff_rpy = np.array(eff_rpy)
+        T_eff = np.eye(4)
+        T_eff[:3, 3] = T_eff_xyz
+        r = R.from_euler('xyz', T_eff_rpy)
+        T_eff[:3, :3] = r.as_matrix()
+
+        # list of rows of T_obj
+        object_pose_list = T_obj.flatten().tolist()
+        effector_pose_list = T_eff.flatten().tolist()
+        self.capture_results.append({'effector_wrt_world': effector_pose_list, 'object_wrt_sensor': object_pose_list})
+
+    def capture_target_sequence(self, script_file:str):
 
         import yaml
         # Read
@@ -1263,6 +1333,7 @@ class GeneralCommander():
             joint_values = joint_state_dict['joint_values']
             print(f"Number of locations read: {len(joint_values)}")
 
+        self.capture_results = []
         for idx, joint_position in enumerate(joint_values):
             print(f"Moving to joint position {idx+1}/{len(joint_values)}: {joint_position}\n")
 
@@ -1272,13 +1343,12 @@ class GeneralCommander():
             except Exception as e:
                 print(f"Failed to move to joint position {idx+1}/{len(joint_values)}: {joint_position}")
                 print(e)
-                return False
+                return []
 
             time.sleep(1)
+            self.capture_joints()
 
-        return True
-
-
+        return self.capture_results
 
     def calibrate_tank(self, reference_frame:str=None, reference_pose:Pose=None) -> Pose:
         self.move_to_named_pose('named_poses.stow', True)
@@ -1301,8 +1371,13 @@ class GeneralCommander():
         tag_1_script = ''
         tag_2_script = ''
         tag_3_script = ''
+        tag_1_samples = []
+        tag_2_samples = []
+        tag_3_samples = []
+        tank_id = ''
 
         if reference_frame.endswith('0'):
+            tank_id = '0'
             tank_ready_named_pose = 'named_poses.tank-0'
             tag_1 = 'named_poses.tag-D'
             tag_2 = 'named_poses.tag-E'
@@ -1313,6 +1388,7 @@ class GeneralCommander():
             tag_3_script = tag_F_script
 
         elif reference_frame.endswith('1'):
+            tank_id = '1'
             tank_ready_named_pose = 'named_poses.tank-1'
             tag_1 = 'named_poses.tag-A'
             tag_2 = 'named_poses.tag-B'
@@ -1337,91 +1413,65 @@ class GeneralCommander():
         # Move to Tag 1
         self.move_to_named_pose(tag_1, True)
         # -- Ensure tag is visible
-        self.is_target_visible(timeout=10.0)
+        if self.is_target_visible(timeout=10.0) == False:
+            rospy.logerr('The commander (calibrate_tank): tag 1 not visible')
+            return center
         # -- Calibration sequence for tag_1
-        sequence_result = self.capture_target_sequence(tag_1_script)
-        if not sequence_result:
+        tag_1_samples = self.capture_target_sequence(tag_1_script)
+        if len(tag_1_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
-            # TODO: return to safe pose
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
             return center
 
         # Move to Tag 2
+        self.move_to_named_pose(tank_ready_named_pose, True)
         self.move_to_named_pose(tag_2, True)
         # -- Ensure tag is visible
-        self.is_target_visible(timeout=10.0)
+        if self.is_target_visible(timeout=10.0) == False:
+            rospy.logerr('The commander (calibrate_tank): tag 2 not visible')
+            return center
         # -- Calibration sequence for tag_2
-        sequence_result = self.capture_target_sequence(tag_2_script)
-        if not sequence_result:
+        tag_2_samples = self.capture_target_sequence(tag_2_script)
+        if len(tag_2_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
-            # TODO: return to safe pose
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
             return center
 
         # Move to Tag 3
+        self.move_to_named_pose(tank_ready_named_pose, True)
         self.move_to_named_pose(tag_3, True)
         # -- Ensure tag is visible
-        self.is_target_visible(timeout=10.0)
-        # -- Calibration sequence for tag_3
-        sequence_result = self.capture_target_sequence(tag_3_script)
-        if not sequence_result:
-            rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
-            # TODO: return to safe pose
+        if self.is_target_visible(timeout=10.0) == False:
+            rospy.logerr('The commander (calibrate_tank): tag 3 not visible')
             return center
+        # -- Calibration sequence for tag_3
+        tag_3_samples = self.capture_target_sequence(tag_3_script)
+        if len(tag_3_samples) == 0:
+            rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
+            return center
+
+        # -- Process the captured samples
+        why = TankLeastSquares(tank_id, tag_1_samples, tag_2_samples, tag_3_samples)
+        center = why.get_tank_center_pose()
+        # transform center to world_tf
+        center_posestamped = PoseStamped()
+        center_posestamped.header.frame_id = 'base_link'
+        center_posestamped.header.stamp = rospy.Time.now()
+        center_posestamped.pose = center
+
+        self.init_transform_listener()
+        transformed_pose = self.tf_buffer.transform(center_posestamped, self.WORLD_REFERENCE_LINK, rospy.Duration(1))
+        center = transformed_pose.pose
 
         # Move to Tank Ready Pose
         self.move_to_named_pose(tank_ready_named_pose, True)
         self.move_to_named_pose('named_poses.stow', True)
 
-        if reference_frame.endswith('0'):
-            # lookup transform from /robot_footprint to /tank_center
-            center_tf = self.tf_buffer.lookup_transform(self.WORLD_REFERENCE_LINK, 'tank_center', rospy.Time(0), rospy.Duration(4.0))
-            center.position.x = center_tf.transform.translation.x
-            center.position.y = center_tf.transform.translation.y
-            center.position.z = center_tf.transform.translation.z
-            center.orientation.x = center_tf.transform.rotation.x
-            center.orientation.y = center_tf.transform.rotation.y
-            center.orientation.z = center_tf.transform.rotation.z
-            center.orientation.w = center_tf.transform.rotation.w
-
-            print(f'Calibrating tank {reference_frame} with WORLD_REFERENCE_LINK {self.WORLD_REFERENCE_LINK} and center: {center}')
-            #input('Press Enter to continue...')
-
-            #center.position.x = -0.029
-            #center.position.y = -1.184
-            #center.position.z = 0.197
-            #center.orientation.x = 0.009
-            #center.orientation.y = 0.003
-            #center.orientation.z = 0.999
-            #center.orientation.w = -0.036
-            #- Rotation: in Quaternion [0.009, 0.003, 0.999, -0.036]
-        elif reference_frame.endswith('1'):
-            # lookup transform from /robot_footprint to /tank_center
-            center_tf = self.tf_buffer.lookup_transform(self.WORLD_REFERENCE_LINK, 'tank_center', rospy.Time(0), rospy.Duration(4.0))
-            center.position.x = center_tf.transform.translation.x
-            center.position.y = center_tf.transform.translation.y
-            center.position.z = center_tf.transform.translation.z
-            center.orientation.x = center_tf.transform.rotation.x
-            center.orientation.y = center_tf.transform.rotation.y
-            center.orientation.z = center_tf.transform.rotation.z
-            center.orientation.w = center_tf.transform.rotation.w
-
-            print(f'Calibrating tank {reference_frame} with WORLD_REFERENCE_LINK {self.WORLD_REFERENCE_LINK} and center: {center}')
-            #input('Press Enter to continue...')
-
-            #center.position.x = -0.006
-            #center.position.y = 1.188
-            #center.position.z = 0.218
-            #center.orientation.x = -0.000
-            #center.orientation.y = 0.000
-            #center.orientation.z = 0.007
-            #center.orientation.w = 1.000
-            #- Rotation: in Quaternion [-0.000, 0.000, 0.007, 1.000]
-
         return center
-
-        
-    # returns a list of current objects that have been added to the commander
-        """ Returns a list of current objects that have been added to the commander
-        """
         
     def list_object_names(self) -> list:
         return self.scene.get_known_object_names()
