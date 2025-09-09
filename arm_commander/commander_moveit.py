@@ -63,6 +63,7 @@ class GeneralCommander():
         # create lock for synchronization
         self.action_lock = threading.Lock()
         # define constants (should import from config)
+        self.JUMP_THRESHOLD = 0.0 # max ratio of joint change over average change
         self.TF_PUB_RATE = rospy.get_param('general_commander/tf_rate', 10)  # default to 10 Hz
         self.CARTE_PLANNING_STEP_SIZE = rospy.get_param('general_commander/step_size', 0.01)  # meters
         self.GROUP_NAME = moveit_group_name
@@ -712,7 +713,7 @@ class GeneralCommander():
                 target_pose.pose.position.z += dz
                 waypoints = [current_pose.pose, target_pose.pose]
                 # changed for new moveit version
-                (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE) 
+                (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE, self.JUMP_THRESHOLD)
                 if fraction < accept_fraction:
                     rospy.logerr(f'Planning failed')
                     self.commander_state = GeneralCommanderStates.ABORTED
@@ -773,7 +774,7 @@ class GeneralCommander():
                     waypoints = [current_in_world_frame.pose, target_in_world_frame.pose]
                     self.commander_state = GeneralCommanderStates.BUSY
                     # changed for new moveit version
-                    (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE) 
+                    (plan, fraction) = self.move_group.compute_cartesian_path(waypoints, self.CARTE_PLANNING_STEP_SIZE, self.JUMP_THRESHOLD)
                     if fraction < accept_fraction:
                         rospy.logerr(f'The commander (move_to_position): planning failed due to collision ({fraction})')
                         self.commander_state, self.commander_state.message = GeneralCommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
@@ -834,7 +835,7 @@ class GeneralCommander():
 
                 self.commander_state = GeneralCommanderStates.BUSY
                 # changed for new moveit version
-                (plan, fraction) = self.move_group.compute_cartesian_path(waypoints_list, self.CARTE_PLANNING_STEP_SIZE) 
+                (plan, fraction) = self.move_group.compute_cartesian_path(waypoints_list, self.CARTE_PLANNING_STEP_SIZE, self.JUMP_THRESHOLD)
                 if fraction < 0.999:
                     rospy.logerr(f'The commander (move_to_multi_positions): planning failed due to collision ({fraction})')
                     self.commander_state, self.commander_state.message = GeneralCommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
@@ -1017,7 +1018,7 @@ class GeneralCommander():
 
                 self.commander_state = GeneralCommanderStates.BUSY
                 # changed for new moveit version
-                (plan, fraction) = self.move_group.compute_cartesian_path(processed_waypoints_list, self.CARTE_PLANNING_STEP_SIZE) 
+                (plan, fraction) = self.move_group.compute_cartesian_path(processed_waypoints_list, self.CARTE_PLANNING_STEP_SIZE, self.JUMP_THRESHOLD)
                 if fraction < 0.999:
                     rospy.logerr(f'The commander (move_to_multi_poses): planning failed due to collision ({fraction})')
                     self.commander_state, self.commander_state.message = GeneralCommanderStates.ABORTED, 'PLANNING_FAILED_DUE_TO_COLLISION'
