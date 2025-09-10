@@ -1291,6 +1291,10 @@ class GeneralCommander():
 
     def capture_joints(self):
         print("Setting up the listener...")
+        if self.is_target_visible() == False:
+            rospy.logerr(f'Failed to detect calibration target at current joint capture location...')
+            return
+
         self.init_transform_listener()
         try:
             object_pose = self.get_transform_as_pose(self.tf_buffer, 'camera_color_optical_frame', 'handeye_target')
@@ -1347,6 +1351,10 @@ class GeneralCommander():
 
             time.sleep(1)
             self.capture_joints()
+
+        if len(self.capture_results) < len(joint_values): # this could be some portion of the locations if we knew the tolerance
+            print(f"Failed to collect estimates at all {len(joint_values)} positions - only captured {len(self.capture_results)}")
+            return []
 
         return self.capture_results
 
@@ -1405,7 +1413,7 @@ class GeneralCommander():
         detector_init_success = self.set_charuco_detector_params(longest_board_size=0.1970, measured_marker_size=0.0170)
         if not detector_init_success:
             rospy.logerr('The commander (calibrate_tank): failed to set the charuco detector parameters')
-            return center # TODO: return error code
+            return Pose()
 
         # Move to Tank Ready Pose
         self.move_to_named_pose(tank_ready_named_pose, True)
@@ -1415,14 +1423,14 @@ class GeneralCommander():
         # -- Ensure tag is visible
         if self.is_target_visible(timeout=10.0) == False:
             rospy.logerr('The commander (calibrate_tank): tag 1 not visible')
-            return center
+            return Pose()
         # -- Calibration sequence for tag_1
         tag_1_samples = self.capture_target_sequence(tag_1_script)
         if len(tag_1_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
             self.move_to_named_pose(tank_ready_named_pose, True)
             self.move_to_named_pose('named_poses.ready', True)
-            return center
+            return Pose()
 
         # Move to Tag 2
         self.move_to_named_pose(tank_ready_named_pose, True)
@@ -1430,14 +1438,14 @@ class GeneralCommander():
         # -- Ensure tag is visible
         if self.is_target_visible(timeout=10.0) == False:
             rospy.logerr('The commander (calibrate_tank): tag 2 not visible')
-            return center
+            return Pose()
         # -- Calibration sequence for tag_2
         tag_2_samples = self.capture_target_sequence(tag_2_script)
         if len(tag_2_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
             self.move_to_named_pose(tank_ready_named_pose, True)
             self.move_to_named_pose('named_poses.ready', True)
-            return center
+            return Pose()
 
         # Move to Tag 3
         self.move_to_named_pose(tank_ready_named_pose, True)
@@ -1445,18 +1453,21 @@ class GeneralCommander():
         # -- Ensure tag is visible
         if self.is_target_visible(timeout=10.0) == False:
             rospy.logerr('The commander (calibrate_tank): tag 3 not visible')
-            return center
+            return Pose()
         # -- Calibration sequence for tag_3
         tag_3_samples = self.capture_target_sequence(tag_3_script)
         if len(tag_3_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
             self.move_to_named_pose(tank_ready_named_pose, True)
             self.move_to_named_pose('named_poses.ready', True)
-            return center
+            return Pose()
 
         # -- Process the captured samples
         why = TankLeastSquares(tank_id, tag_1_samples, tag_2_samples, tag_3_samples)
         center = why.get_tank_center_pose()
+        # -- TODO: actual error checking with known tolerance
+        # -- -- return Pose() if tolerance not met..e.g. min/max X,Y,Z,R,P,Y
+
         # transform center to world_tf
         center_posestamped = PoseStamped()
         center_posestamped.header.frame_id = 'base_link'
