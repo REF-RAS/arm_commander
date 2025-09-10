@@ -1329,10 +1329,13 @@ class GeneralCommander():
 
     def capture_target_sequence(self, script_file:str):
 
+        import rospkg
         import yaml
+        rospack = rospkg.RosPack()
+        scene_path = rospack.get_path('cgras_scene')
         # Read
         # TODO: set the path properly
-        with open(f'/home/qcr/cgras2025_ws/src/scripts/calibration/{script_file}', newline='') as the_file:
+        with open(f'{scene_path}/calibration_joint_sequences/{script_file}', newline='') as the_file:
             joint_state_dict = yaml.safe_load(the_file)
             joint_values = joint_state_dict['joint_values']
             print(f"Number of locations read: {len(joint_values)}")
@@ -1413,7 +1416,7 @@ class GeneralCommander():
         detector_init_success = self.set_charuco_detector_params(longest_board_size=0.1970, measured_marker_size=0.0170)
         if not detector_init_success:
             rospy.logerr('The commander (calibrate_tank): failed to set the charuco detector parameters')
-            return Pose()
+            raise Exception('-- Charuco detector service failed...')
 
         # Move to Tank Ready Pose
         self.move_to_named_pose(tank_ready_named_pose, True)
@@ -1423,14 +1426,16 @@ class GeneralCommander():
         # -- Ensure tag is visible
         if self.is_target_visible(timeout=10.0) == False:
             rospy.logerr('The commander (calibrate_tank): tag 1 not visible')
-            return Pose()
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
+            raise Exception('tag 1 not visible')
         # -- Calibration sequence for tag_1
         tag_1_samples = self.capture_target_sequence(tag_1_script)
         if len(tag_1_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
             self.move_to_named_pose(tank_ready_named_pose, True)
             self.move_to_named_pose('named_poses.ready', True)
-            return Pose()
+            raise Exception('tag 1 - failed capture')
 
         # Move to Tag 2
         self.move_to_named_pose(tank_ready_named_pose, True)
@@ -1438,14 +1443,16 @@ class GeneralCommander():
         # -- Ensure tag is visible
         if self.is_target_visible(timeout=10.0) == False:
             rospy.logerr('The commander (calibrate_tank): tag 2 not visible')
-            return Pose()
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
+            raise Exception('tag 2 not visible')
         # -- Calibration sequence for tag_2
         tag_2_samples = self.capture_target_sequence(tag_2_script)
         if len(tag_2_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
             self.move_to_named_pose(tank_ready_named_pose, True)
             self.move_to_named_pose('named_poses.ready', True)
-            return Pose()
+            raise Exception('tag 2 - failed capture')
 
         # Move to Tag 3
         self.move_to_named_pose(tank_ready_named_pose, True)
@@ -1453,20 +1460,27 @@ class GeneralCommander():
         # -- Ensure tag is visible
         if self.is_target_visible(timeout=10.0) == False:
             rospy.logerr('The commander (calibrate_tank): tag 3 not visible')
-            return Pose()
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
+            raise Exception('tag 3 not visible')
         # -- Calibration sequence for tag_3
         tag_3_samples = self.capture_target_sequence(tag_3_script)
         if len(tag_3_samples) == 0:
             rospy.logerr('The commander (calibrate_tank): failed to capture the target sequence for tag 1')
             self.move_to_named_pose(tank_ready_named_pose, True)
             self.move_to_named_pose('named_poses.ready', True)
-            return Pose()
+            raise Exception('tag 3 - failed capture')
 
         # -- Process the captured samples
         why = TankLeastSquares(tank_id, tag_1_samples, tag_2_samples, tag_3_samples)
         center = why.get_tank_center_pose()
         # -- TODO: actual error checking with known tolerance
-        # -- -- return Pose() if tolerance not met..e.g. min/max X,Y,Z,R,P,Y
+        # -- -- raise Exception if tolerance not met..e.g. min/max X,Y,Z,R,P,Y
+        # e.g.
+        if center.position == [0,0,0]:
+            self.move_to_named_pose(tank_ready_named_pose, True)
+            self.move_to_named_pose('named_poses.ready', True)
+            raise Exception(f'Tank Center in unacceptable location - {center.position}')
 
         # transform center to world_tf
         center_posestamped = PoseStamped()
