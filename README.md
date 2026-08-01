@@ -1,13 +1,15 @@
-# The Arm Commander
-
-![QUT REF Collection](https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github) [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+# The Arm Commander for ROS 1
 
 **Robotics and Autonomous Systems Group, Research Engineering Facility, Research Infrastructure**
 **Queensland University of Technology**
 
+![QUT REF Collection](https://badgen.net/badge/collections/QUT%20REF-RAS?icon=github) 
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Build Sphinx and Deploy](https://github.com/REF-RAS/arm_commander/actions/workflows/sphinx.yml/badge.svg)](https://github.com/REF-RAS/arm_commander/actions/workflows/sphinx.yml)
+
 ## Introduction
 
-The **Arm Commander** is a Python programming module for accelerating the development of robot arm manipulation applications.  
+The **Arm Commander** is a Python programming module for accelerating the development of robot arm manipulation applications.  This repository hosts the ROS 1 version.  The ROS 2 version is being developed and it will be available in another repository.
 
 ![Demo Animation](docs/assets/DemoArmCommander.gif)
 
